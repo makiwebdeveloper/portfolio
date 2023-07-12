@@ -1,0 +1,5 @@
++--- Sections ---+
+[ ] - Hero
+[ ] - What i do
+[ ] - Projects
+[ ] - Contacts
