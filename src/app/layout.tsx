@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/cn";
 import Navbar from "@/components/Navbar";
+import GoUpButton from "@/components/GoUpButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,9 +19,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={cn("h-[200vh] text-xl", inter.className)}>
+      <body className={cn("min-h-screen text-xl", inter.className)}>
         <Navbar />
-        <div className="py-10">{children}</div>
+        {children}
+        <GoUpButton />
       </body>
     </html>
   );

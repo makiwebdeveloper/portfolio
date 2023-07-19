@@ -23,20 +23,22 @@ export default function Navbar() {
   return (
     <nav
       className={cn(
-        "px-16 py-4 flex justify-end sticky mt-4 top-0 z-[100] bg-white",
+        "px-16 py-4 flex justify-end fixed top-0 z-[100] bg-white w-full",
         scrollY > 50 && "border-b-2 border-slate-600"
       )}
     >
       <ul className="flex items-center gap-10">
         <li>
-          <CustomLink href="#about">About me</CustomLink>
+          <CustomLink bgColor="orange" href="#about">
+            About me
+          </CustomLink>
         </li>
         <li>
           <CustomLink href="#projects">Projects</CustomLink>
         </li>
         <li>
           <Link href="#contacts">
-            <Button>Contacts</Button>
+            <Button bgColor="green">Contacts</Button>
           </Link>
         </li>
       </ul>

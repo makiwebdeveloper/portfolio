@@ -1,4 +1,7 @@
-import Container from "@/components/Container";
+import About from "@/components/About";
+import Contacts from "@/components/Contacts";
+import Hero from "@/components/Hero";
+import Projects from "@/components/Projects";
 import { getProjects } from "@/services/projects";
 
 export const revalidate = 3600;
@@ -8,7 +11,10 @@ export default async function Home() {
 
   return (
     <main>
-      <Container>Home</Container>
+      <Hero />
+      <About />
+      <Projects />
+      <Contacts />
     </main>
   );
 }

@@ -1,3 +1,28 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+*, html {
+
+  scroll-behavior: smooth !important;
+}
+
+.text-shadow-purple {
+  text-shadow: 5px 5px rgb(216 180 254);
+}
+
+.text-shadow-orange {
+  text-shadow: 5px 5px rgb(253 186 116);
+}
+
+.text-shadow-green {
+  text-shadow: 5px 5px rgb(134 239 172);
+}
+
+.container {
+  @apply w-2/3 mx-auto pt-28 pb-8;
+}
+
+.title {
+  @apply text-5xl font-semibold;
+}
