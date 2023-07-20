@@ -16,11 +16,11 @@ export default function CustomLink({
   return (
     <div
       className={cn(
-        "relative w-fit group transition duration-300 border-b-4 border-transparent hover:border-black",
+        "relative w-fit group transition duration-300 border-b-4 border-transparent hover:border-slate-600",
         "before:content-[''] before:absolute before:w-3/4 before:translate-x-[-50%] before:left-[50%] before:h-1 before:transition before:delay-200 before:duration-300 before:transparent before:-bottom-1 before:hover:translate-y-1 ",
-        bgColor === "purple" && "before:hover:bg-purple-300",
-        bgColor === "orange" && "before:hover:bg-orange-300",
-        bgColor === "green" && "before:hover:bg-green-300"
+        bgColor === "purple" && "before:hover:bg-purple-200",
+        bgColor === "orange" && "before:hover:bg-orange-200",
+        bgColor === "green" && "before:hover:bg-green-200"
       )}
     >
       <Link {...props}>

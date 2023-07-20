@@ -13,7 +13,7 @@ export default async function Home() {
     <main>
       <Hero />
       <About />
-      <Projects />
+      <Projects projects={projects} />
       <Contacts />
     </main>
   );
