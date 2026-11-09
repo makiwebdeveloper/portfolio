@@ -1,0 +1,61 @@
+---
+import { useT, type Lang } from '../../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useT(lang);
+---
+
+<section class="intro section" id="intro" tabindex="-1" data-scene="0" aria-labelledby="intro-label">
+  <div class="container intro__inner">
+    <p class="eyebrow" id="intro-label" data-reveal>{t('intro.eyebrow')}</p>
+    <p class="intro__text" data-intro-text>{t('intro.text')}</p>
+  </div>
+</section>
+
+<style>
+  .intro {
+    outline: none;
+  }
+
+  .intro__inner {
+    display: grid;
+    gap: 2rem;
+    max-width: 1100px;
+  }
+
+  .intro__text {
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    line-height: 1.15;
+    text-wrap: pretty;
+  }
+
+  .intro__text :global(.split-mask) {
+    overflow: visible;
+  }
+</style>
+
+<script>
+  import { gsap, reducedMotion } from '../../lib/motion';
+  import { splitText } from '../../lib/split';
+
+  const el = document.querySelector<HTMLElement>('[data-intro-text]');
+
+  if (el && !reducedMotion.matches) {
+    const words = splitText(el, 'words');
+    // Слова «проявляются» вслед за скроллом
+    gsap.fromTo(
+      words,
+      { opacity: 0.14 },
+      {
+        opacity: 1,
+        ease: 'none',
+        stagger: 0.1,
+        scrollTrigger: { trigger: el, start: 'top 80%', end: 'bottom 45%', scrub: 0.6 },
+      },
+    );
+  }
+</script>

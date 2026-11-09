@@ -1,0 +1,180 @@
+---
+import { pick, useT, type Lang } from '../../i18n';
+import { skills, spoken } from '../../data/profile';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useT(lang);
+
+const rows = [
+  { label: t('skills.languages'), items: skills.languages, dir: 'left', speed: 38 },
+  { label: t('skills.tech'), items: skills.tech, dir: 'right', speed: 46 },
+  { label: t('skills.tools'), items: skills.tools, dir: 'left', speed: 42 },
+];
+---
+
+<section class="skills section" id="skills" tabindex="-1" data-scene="0" aria-labelledby="skills-title">
+  <div class="container skills__head">
+    <p class="eyebrow" data-reveal>{t('skills.eyebrow')}</p>
+    <h2 class="skills__title" id="skills-title" data-reveal style="--reveal-i: 1">{t('skills.title')}</h2>
+  </div>
+
+  <div class="skills__rows">
+    {
+      rows.map((row, i) => (
+        <div class="marquee" data-reveal style={`--reveal-i: ${i}; --speed: ${row.speed}s`} data-dir={row.dir}>
+          <h3 class="marquee__label container">{row.label}</h3>
+          <div class="marquee__viewport">
+            {/* Первая копия — для скринридеров, вторая — только для бесшовной петли */}
+            <ul class="marquee__track" role="list">
+              {row.items.map((s) => (
+                <li>{s}</li>
+              ))}
+            </ul>
+            <ul class="marquee__track" role="list" aria-hidden="true">
+              {row.items.map((s) => (
+                <li>{s}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="container spoken" data-reveal>
+    <h3 class="marquee__label">{t('skills.spoken')}</h3>
+    <ul class="spoken__list" role="list">
+      {
+        spoken.map((s) => (
+          <li>
+            <span class="spoken__name">{pick(s.name, lang)}</span>
+            <span class="spoken__level">{pick(s.level, lang)}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .skills {
+    outline: none;
+  }
+
+  .skills__head {
+    display: grid;
+    gap: 1.2rem;
+    margin-bottom: clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  .skills__title {
+    font-size: var(--step-4);
+  }
+
+  .skills__rows {
+    display: grid;
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  .marquee__label {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 0.6rem;
+  }
+
+  .marquee__viewport {
+    display: flex;
+    overflow: hidden;
+    border-block: 1px solid var(--color-line);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+
+  .marquee__track {
+    flex: none;
+    display: flex;
+    min-width: max-content;
+    animation: marquee var(--speed) linear infinite;
+  }
+  [data-dir='right'] .marquee__track {
+    animation-direction: reverse;
+  }
+  .marquee:hover .marquee__track {
+    animation-play-state: paused;
+  }
+
+  .marquee__track li {
+    display: flex;
+    align-items: center;
+    gap: clamp(1.2rem, 3vw, 2.5rem);
+    padding: 0.8rem 0 0.8rem clamp(1.2rem, 3vw, 2.5rem);
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .marquee__track li::after {
+    content: '✦';
+    font-size: 0.4em;
+    color: var(--color-accent);
+  }
+  .marquee__track li:nth-child(even) {
+    font-style: italic;
+  }
+
+  @keyframes marquee {
+    to {
+      transform: translateX(-100%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee__viewport {
+      flex-wrap: wrap;
+      mask-image: none;
+    }
+    .marquee__track {
+      flex-wrap: wrap;
+      min-width: 0;
+      animation: none;
+    }
+    .marquee__track[aria-hidden] {
+      display: none;
+    }
+  }
+
+  .spoken {
+    margin-top: clamp(3rem, 7vw, 5rem);
+  }
+
+  .spoken__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 1rem;
+  }
+
+  .spoken__list li {
+    display: grid;
+    gap: 0.2rem;
+    padding: 1.1rem 1.2rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--color-surface) 60%, transparent);
+  }
+
+  .spoken__name {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    line-height: 1.1;
+  }
+
+  .spoken__level {
+    font-size: var(--step--1);
+    color: var(--color-muted);
+  }
+</style>

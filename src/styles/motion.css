@@ -1,0 +1,54 @@
+/* Начальные состояния анимаций.
+   Срабатывают ТОЛЬКО когда есть класс .js на <html> (ставится инлайн-скриптом),
+   иначе страница сразу показывается в готовом виде. */
+
+.js [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 2.2rem, 0);
+}
+
+.js [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+  transition-delay: calc(var(--reveal-i, 0) * 80ms);
+}
+
+/* Деление на слова/символы (src/lib/split.ts) */
+.split-mask {
+  display: inline-block;
+  overflow: clip;
+  vertical-align: top;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+.split-word,
+.split-char {
+  display: inline-block;
+}
+
+/* Пока hero не стартовал, прячем его — иначе мелькнёт готовый вид */
+.js.is-entering [data-hero-in] {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+  .js.is-entering [data-hero-in] {
+    visibility: visible;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,483 @@
+---
+import { languages, pathFor, useT, type Lang } from '../i18n';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useT(lang);
+
+const links = [
+  { id: 'story', label: t('nav.story') },
+  { id: 'work', label: t('nav.work') },
+  { id: 'skills', label: t('nav.skills') },
+  { id: 'contact', label: t('nav.contact') },
+];
+---
+
+<header class="nav" data-nav>
+  <div class="nav__bar">
+    <a class="nav__logo" href="#top" aria-label={t('nav.home')} data-scroll-link>
+      <span class="nav__mono">IM</span>
+    </a>
+
+    <nav class="nav__links" aria-label={t('nav.label')}>
+      <ul role="list">
+        {
+          links.map((l, i) => (
+            <li>
+              <a href={`#${l.id}`} data-scroll-link data-nav-link={l.id}>
+                <span class="nav__num">0{i + 1}</span>
+                {l.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="nav__tools">
+      <div class="nav__langs" role="group" aria-label={t('lang.label')}>
+        {
+          (Object.keys(languages) as Lang[]).map((l) => (
+            <a href={pathFor(l)} hreflang={l} lang={l} aria-current={l === lang ? 'true' : undefined}>
+              {l.toUpperCase()}
+            </a>
+          ))
+        }
+      </div>
+
+      <button
+        class="nav__icon"
+        type="button"
+        data-orbs-toggle
+        aria-pressed="false"
+        data-label-pause={t('bg.pause')}
+        data-label-play={t('bg.play')}
+        aria-label={t('bg.pause')}
+        hidden
+      >
+        <svg viewBox="0 0 20 20" width="18" height="18" class="i-pause"><path d="M6 4h2.5v12H6zM11.5 4H14v12h-2.5z" fill="currentColor"></path></svg>
+        <svg viewBox="0 0 20 20" width="18" height="18" class="i-play"><path d="M6 4l10 6-10 6z" fill="currentColor"></path></svg>
+      </button>
+
+      <button
+        class="nav__icon nav__theme"
+        type="button"
+        data-theme-toggle
+        aria-label={t('theme.toggle')}
+        data-day={t('theme.day')}
+        data-night={t('theme.night')}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+          <mask id="moon-mask">
+            <rect width="24" height="24" fill="white"></rect>
+            <circle class="theme__cut" cx="24" cy="4" r="7" fill="black"></circle>
+          </mask>
+          <circle class="theme__core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#moon-mask)"></circle>
+          <g class="theme__rays" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path>
+          </g>
+        </svg>
+      </button>
+
+      <button
+        class="nav__menu-btn"
+        type="button"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        data-menu-btn
+        data-open={t('nav.menu')}
+        data-close={t('nav.close')}
+      >
+        <span class="nav__menu-text">{t('nav.menu')}</span>
+        <span class="nav__burger" aria-hidden="true"><span></span><span></span></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="mmenu" id="mobile-menu" data-menu hidden>
+    <nav aria-label={t('nav.label')}>
+      <ul role="list">
+        {
+          links.map((l, i) => (
+            <li>
+              <a href={`#${l.id}`} data-scroll-link>
+                <span class="nav__num">0{i + 1}</span>
+                {l.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 100;
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  .nav.is-hidden:not(.is-open) {
+    transform: translateY(-110%);
+  }
+
+  .nav__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem var(--gutter);
+    position: relative;
+    z-index: 2;
+  }
+
+  /* мягкая подложка, когда страница прокручена */
+  .nav__bar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--color-veil);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    opacity: 0;
+    transition: opacity 0.4s;
+    z-index: -1;
+  }
+  .nav.is-scrolled .nav__bar::before {
+    opacity: 1;
+  }
+  .nav.is-open .nav__bar::before {
+    opacity: 0;
+  }
+
+  .nav__logo {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border: 1px solid var(--color-line);
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-style: italic;
+    transition: background 0.3s, color 0.3s;
+  }
+  .nav__logo:hover {
+    background: var(--color-text);
+    color: var(--color-bg);
+  }
+
+  .nav__links ul {
+    display: flex;
+    gap: clamp(1rem, 2.5vw, 2.4rem);
+  }
+
+  .nav__links a {
+    position: relative;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4em;
+    font-size: var(--step--1);
+    letter-spacing: 0.06em;
+    padding-block: 0.3rem;
+  }
+
+  .nav__links a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.5s var(--ease-out);
+  }
+  .nav__links a:hover::after,
+  .nav__links a.is-active::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  .nav__num {
+    font-size: 0.7em;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nav__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .nav__langs {
+    display: flex;
+    gap: 0.1rem;
+    margin-right: 0.4rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+  }
+  .nav__langs a {
+    padding: 0.35rem 0.45rem;
+    border-radius: 999px;
+    color: var(--color-muted);
+    transition: color 0.2s, background 0.2s;
+  }
+  .nav__langs a:hover {
+    color: var(--color-text);
+  }
+  .nav__langs a[aria-current] {
+    color: var(--color-bg);
+    background: var(--color-text);
+  }
+
+  .nav__icon {
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+  .nav__icon:hover {
+    background: var(--color-line);
+  }
+  .nav__icon[hidden] {
+    display: none;
+  }
+
+  .i-play {
+    display: none;
+  }
+  [aria-pressed='true'] .i-play {
+    display: block;
+  }
+  [aria-pressed='true'] .i-pause {
+    display: none;
+  }
+
+  /* Солнце ↔ луна */
+  .theme__core,
+  .theme__cut,
+  .theme__rays {
+    transition: transform 0.6s var(--ease-out), opacity 0.4s;
+    transform-origin: 12px 12px;
+  }
+  :global([data-theme='night']) .theme__core {
+    transform: scale(1.5);
+  }
+  :global([data-theme='night']) .theme__cut {
+    transform: translate(-9px, 5px);
+  }
+  :global([data-theme='night']) .theme__rays {
+    opacity: 0;
+    transform: rotate(-45deg) scale(0.6);
+  }
+
+  /* --- Мобильное меню --- */
+  .nav__menu-btn {
+    display: none;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.4rem 0.5rem 0.8rem;
+    font-size: var(--step--1);
+    letter-spacing: 0.08em;
+  }
+
+  .nav__burger {
+    display: grid;
+    gap: 5px;
+    width: 22px;
+  }
+  .nav__burger span {
+    height: 1.5px;
+    background: currentColor;
+    transition: transform 0.4s var(--ease-out);
+  }
+  .nav.is-open .nav__burger span:first-child {
+    transform: translateY(3.25px) rotate(45deg);
+  }
+  .nav.is-open .nav__burger span:last-child {
+    transform: translateY(-3.25px) rotate(-45deg);
+  }
+
+  .mmenu {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    align-items: center;
+    padding: 6rem var(--gutter) 3rem;
+    background: var(--color-bg);
+    clip-path: inset(0 0 100% 0);
+    transition: clip-path 0.7s var(--ease-in-out);
+  }
+  .mmenu[hidden] {
+    display: none;
+  }
+  .nav.is-open .mmenu {
+    clip-path: inset(0 0 0 0);
+  }
+  .mmenu ul {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .mmenu a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    font-family: var(--font-display);
+    font-size: var(--step-4);
+    line-height: 1.1;
+  }
+  .mmenu li {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    transition: opacity 0.5s, transform 0.6s var(--ease-out);
+  }
+  .nav.is-open .mmenu li {
+    opacity: 1;
+    transform: none;
+  }
+  .nav.is-open .mmenu li:nth-child(2) { transition-delay: 0.06s; }
+  .nav.is-open .mmenu li:nth-child(3) { transition-delay: 0.12s; }
+  .nav.is-open .mmenu li:nth-child(4) { transition-delay: 0.18s; }
+
+  @media (max-width: 820px) {
+    .nav__links {
+      display: none;
+    }
+    .nav__menu-btn {
+      display: inline-flex;
+    }
+    .nav__langs {
+      margin-right: 0;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .nav__menu-text {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  import { lockScroll, scrollToTarget } from '../lib/motion';
+  import { getTheme, setTheme } from '../lib/theme';
+
+  const nav = document.querySelector<HTMLElement>('[data-nav]')!;
+  const menu = nav.querySelector<HTMLElement>('[data-menu]')!;
+  const menuBtn = nav.querySelector<HTMLButtonElement>('[data-menu-btn]')!;
+  const menuText = menuBtn.querySelector<HTMLElement>('.nav__menu-text')!;
+
+  /* ---------- Плавные якоря ---------- */
+  document.addEventListener('click', (e) => {
+    const a = (e.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');
+    if (!a) return;
+    const id = a.getAttribute('href')!;
+    const target = id === '#top' ? 0 : document.querySelector<HTMLElement>(id);
+    if (target === null) return;
+    e.preventDefault();
+    if (nav.classList.contains('is-open')) setMenu(false);
+    scrollToTarget(target);
+    history.replaceState(null, '', id === '#top' ? location.pathname : id);
+    // переводим фокус в секцию для клавиатуры и скринридеров
+    if (target instanceof HTMLElement) target.focus({ preventScroll: true });
+  });
+
+  /* ---------- Спрятать при скролле вниз, показать при скролле вверх ---------- */
+  let lastY = window.scrollY;
+  let ticking = false;
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        nav.classList.toggle('is-scrolled', y > 40);
+        nav.classList.toggle('is-hidden', y > lastY && y > 400);
+        lastY = y;
+        ticking = false;
+      });
+    },
+    { passive: true },
+  );
+  nav.addEventListener('focusin', () => nav.classList.remove('is-hidden'));
+
+  /* ---------- Активный пункт ---------- */
+  const navLinks = nav.querySelectorAll<HTMLAnchorElement>('[data-nav-link]');
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        navLinks.forEach((l) => {
+          const active = l.dataset.navLink === entry.target.id;
+          l.classList.toggle('is-active', active);
+          if (active) l.setAttribute('aria-current', 'location');
+          else l.removeAttribute('aria-current');
+        });
+      }
+    },
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
+  navLinks.forEach((l) => {
+    const section = document.getElementById(l.dataset.navLink!);
+    if (section) io.observe(section);
+  });
+
+  /* ---------- Тема ---------- */
+  const themeBtn = nav.querySelector<HTMLButtonElement>('[data-theme-toggle]')!;
+  const syncThemeLabel = () => {
+    const next = getTheme() === 'day' ? themeBtn.dataset.night : themeBtn.dataset.day;
+    themeBtn.title = next ?? '';
+  };
+  syncThemeLabel();
+  themeBtn.addEventListener('click', () => {
+    setTheme(getTheme() === 'day' ? 'night' : 'day');
+    syncThemeLabel();
+  });
+
+  /* ---------- Пауза WebGL-фона ---------- */
+  const orbsBtn = nav.querySelector<HTMLButtonElement>('[data-orbs-toggle]')!;
+  orbsBtn.addEventListener('click', () => window.dispatchEvent(new CustomEvent('orbs:toggle')));
+  window.addEventListener('orbs:state', (e) => {
+    const paused = (e as CustomEvent<{ paused: boolean }>).detail.paused;
+    orbsBtn.hidden = false;
+    orbsBtn.setAttribute('aria-pressed', String(paused));
+    orbsBtn.setAttribute('aria-label', (paused ? orbsBtn.dataset.labelPlay : orbsBtn.dataset.labelPause) ?? '');
+  });
+
+  /* ---------- Мобильное меню ---------- */
+  function setMenu(open: boolean) {
+    menuBtn.setAttribute('aria-expanded', String(open));
+    menuText.textContent = (open ? menuBtn.dataset.close : menuBtn.dataset.open) ?? '';
+    lockScroll(open);
+    if (open) {
+      menu.hidden = false;
+      // даём браузеру применить display, потом запускаем переход
+      requestAnimationFrame(() => nav.classList.add('is-open'));
+      menu.querySelector('a')?.focus({ preventScroll: true });
+    } else {
+      nav.classList.remove('is-open');
+      menu.addEventListener('transitionend', () => !nav.classList.contains('is-open') && (menu.hidden = true), {
+        once: true,
+      });
+    }
+  }
+  menuBtn.addEventListener('click', () => setMenu(menuBtn.getAttribute('aria-expanded') !== 'true'));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && nav.classList.contains('is-open')) {
+      setMenu(false);
+      menuBtn.focus();
+    }
+  });
+</script>

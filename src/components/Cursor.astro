@@ -1,0 +1,317 @@
+---
+/**
+ * Свой курсор: точка + кольцо с запаздыванием, звезда над ссылками,
+ * след из звёздочек и вспышка при клике. Только для мыши
+ * (hover:hover + pointer:fine) и без prefers-reduced-motion.
+ * Все цвета берутся из токенов (--color-text / --color-particle).
+ */
+const star = 'M12 0C12.6 7.8 16.2 11.4 24 12C16.2 12.6 12.6 16.2 12 24C11.4 16.2 7.8 12.6 0 12C7.8 11.4 11.4 7.8 12 0Z';
+const TRAIL = 14;
+const BURST = 8;
+---
+
+<div class="cursor" data-cursor-root aria-hidden="true">
+  <div class="cursor__trail">
+    {
+      Array.from({ length: TRAIL }, () => (
+        <svg class="cursor__stamp" viewBox="0 0 24 24">
+          <path d={star} />
+        </svg>
+      ))
+    }
+  </div>
+  <div class="cursor__burst">
+    {Array.from({ length: BURST }, () => <span class="cursor__ray" />)}
+  </div>
+  <div class="cursor__ring"><span class="cursor__label"></span></div>
+  <div class="cursor__dot">
+    <svg class="cursor__star" viewBox="0 0 24 24"><path d={star} /></svg>
+  </div>
+</div>
+
+<style>
+  .cursor {
+    display: none;
+  }
+
+  :global(html.has-cursor),
+  :global(html.has-cursor *) {
+    cursor: none !important;
+  }
+
+  :global(html.has-cursor) .cursor {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    pointer-events: none;
+    color: var(--color-text);
+  }
+
+  .cursor__dot,
+  .cursor__ring,
+  .cursor__stamp,
+  .cursor__ray {
+    position: fixed;
+    top: 0;
+    left: 0;
+    will-change: transform;
+  }
+
+  /* Точка = настоящая позиция мыши */
+  .cursor__dot {
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: currentColor;
+    transition:
+      width 0.3s var(--ease-out),
+      height 0.3s var(--ease-out),
+      margin 0.3s var(--ease-out),
+      background 0.3s;
+  }
+
+  .cursor__star {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    fill: var(--color-accent);
+    opacity: 0;
+    transform: scale(0.2) rotate(-90deg);
+    transition:
+      opacity 0.3s,
+      transform 0.5s var(--ease-out);
+  }
+
+  /* Кольцо = догоняет с задержкой */
+  .cursor__ring {
+    width: 36px;
+    height: 36px;
+    margin: -18px 0 0 -18px;
+    border: 1px solid color-mix(in oklch, currentColor 45%, transparent);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    transition:
+      width 0.4s var(--ease-out),
+      height 0.4s var(--ease-out),
+      margin 0.4s var(--ease-out),
+      background 0.3s,
+      border-color 0.3s,
+      opacity 0.3s;
+  }
+
+  .cursor__label {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-bg);
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  /* --- Состояние: над ссылкой/кнопкой --- */
+  .cursor.is-link .cursor__dot {
+    width: 22px;
+    height: 22px;
+    margin: -11px 0 0 -11px;
+    background: transparent;
+  }
+  .cursor.is-link .cursor__star {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  .cursor.is-link .cursor__ring {
+    width: 56px;
+    height: 56px;
+    margin: -28px 0 0 -28px;
+    border-color: color-mix(in oklch, var(--color-accent) 50%, transparent);
+  }
+
+  /* --- Состояние: над элементом с подписью (data-cursor="View") --- */
+  .cursor.is-label .cursor__ring {
+    width: 84px;
+    height: 84px;
+    margin: -42px 0 0 -42px;
+    background: var(--color-text);
+    border-color: transparent;
+  }
+  .cursor.is-label .cursor__label {
+    opacity: 1;
+  }
+  .cursor.is-label .cursor__dot {
+    opacity: 0;
+  }
+
+  .cursor.is-hidden .cursor__dot,
+  .cursor.is-hidden .cursor__ring {
+    opacity: 0;
+  }
+
+  .cursor.is-down .cursor__ring {
+    width: 26px;
+    height: 26px;
+    margin: -13px 0 0 -13px;
+  }
+
+  /* След */
+  .cursor__stamp {
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    fill: var(--color-particle);
+    opacity: 0;
+  }
+
+  /* Вспышка */
+  .cursor__ray {
+    width: 2px;
+    height: 10px;
+    margin: -5px 0 0 -1px;
+    border-radius: 2px;
+    background: var(--color-accent);
+    opacity: 0;
+  }
+</style>
+
+<script>
+  import { gsap, finePointer, reducedMotion } from '../lib/motion';
+
+  const root = document.querySelector<HTMLElement>('[data-cursor-root]')!;
+  const dot = root.querySelector<HTMLElement>('.cursor__dot')!;
+  const ring = root.querySelector<HTMLElement>('.cursor__ring')!;
+  const label = root.querySelector<HTMLElement>('.cursor__label')!;
+  const stamps = Array.from(root.querySelectorAll<SVGElement>('.cursor__stamp'));
+  const rays = Array.from(root.querySelectorAll<HTMLElement>('.cursor__ray'));
+
+  const INTERACTIVE = 'a, button, [role="button"], label, summary, [data-cursor]';
+
+  let enabled = false;
+  const mouse = { x: -100, y: -100 };
+  const ringPos = { x: -100, y: -100 };
+  let lastStamp = { x: 0, y: 0 };
+  let stampIndex = 0;
+  let raf = 0;
+
+  const setX = (el: Element, x: number, y: number, extra = '') =>
+    ((el as HTMLElement).style.transform = `translate3d(${x}px, ${y}px, 0) ${extra}`);
+
+  function tick() {
+    raf = requestAnimationFrame(tick);
+    ringPos.x += (mouse.x - ringPos.x) * 0.18;
+    ringPos.y += (mouse.y - ringPos.y) * 0.18;
+    setX(dot, mouse.x, mouse.y);
+    setX(ring, ringPos.x, ringPos.y);
+  }
+
+  function spawnStamp(x: number, y: number) {
+    const s = stamps[stampIndex];
+    stampIndex = (stampIndex + 1) % stamps.length;
+    const rot = Math.random() * 90;
+    const scale = 0.6 + Math.random() * 0.7;
+    gsap.killTweensOf(s);
+    gsap.fromTo(
+      s,
+      { x, y, opacity: 0.9, scale, rotate: rot },
+      { y: y + 14, opacity: 0, scale: 0.2, rotate: rot + 60, duration: 0.9, ease: 'power2.out' },
+    );
+  }
+
+  function burst(x: number, y: number) {
+    rays.forEach((r, i) => {
+      const angle = (i / rays.length) * 360;
+      gsap.killTweensOf(r);
+      gsap.fromTo(
+        r,
+        { x, y, rotate: angle, opacity: 1, scaleY: 1, yPercent: 0, transformOrigin: '50% 50%' },
+        {
+          opacity: 0,
+          scaleY: 0.3,
+          duration: 0.55,
+          ease: 'power3.out',
+          // вылет вдоль своего угла
+          x: x + Math.sin((angle * Math.PI) / 180) * 26,
+          y: y - Math.cos((angle * Math.PI) / 180) * 26,
+        },
+      );
+    });
+  }
+
+  function onMove(e: PointerEvent) {
+    if (e.pointerType !== 'mouse') return;
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    root.classList.remove('is-hidden');
+    const dx = mouse.x - lastStamp.x;
+    const dy = mouse.y - lastStamp.y;
+    if (dx * dx + dy * dy > 38 * 38) {
+      lastStamp = { x: mouse.x, y: mouse.y };
+      spawnStamp(mouse.x, mouse.y);
+    }
+  }
+
+  function onOver(e: PointerEvent) {
+    const target = (e.target as Element).closest<HTMLElement>(INTERACTIVE);
+    const text = target?.dataset.cursor;
+    root.classList.toggle('is-label', !!text);
+    root.classList.toggle('is-link', !!target && !text);
+    if (text) label.textContent = text;
+  }
+
+  const onDown = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse') return;
+    root.classList.add('is-down');
+    burst(e.clientX, e.clientY);
+  };
+  const onUp = () => root.classList.remove('is-down');
+  const onLeave = () => root.classList.add('is-hidden');
+
+  function enable() {
+    if (enabled) return;
+    enabled = true;
+    document.documentElement.classList.add('has-cursor');
+    window.addEventListener('pointermove', onMove, { passive: true });
+    document.addEventListener('pointerover', onOver, { passive: true });
+    window.addEventListener('pointerdown', onDown, { passive: true });
+    window.addEventListener('pointerup', onUp, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onLeave);
+    raf = requestAnimationFrame(tick);
+  }
+
+  function disable() {
+    if (!enabled) return;
+    enabled = false;
+    document.documentElement.classList.remove('has-cursor');
+    window.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerover', onOver);
+    window.removeEventListener('pointerdown', onDown);
+    window.removeEventListener('pointerup', onUp);
+    document.documentElement.removeEventListener('pointerleave', onLeave);
+    cancelAnimationFrame(raf);
+  }
+
+  const sync = () => (finePointer.matches && !reducedMotion.matches ? enable() : disable());
+  finePointer.addEventListener('change', sync);
+  reducedMotion.addEventListener('change', sync);
+  sync();
+
+  // Магнитные элементы: [data-magnetic] слегка тянутся к курсору.
+  document.querySelectorAll<HTMLElement>('[data-magnetic]').forEach((el) => {
+    const strength = Number(el.dataset.magnetic) || 0.3;
+    const xTo = gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3.out' });
+    const yTo = gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3.out' });
+    el.addEventListener('pointermove', (e) => {
+      if (!enabled) return;
+      const r = el.getBoundingClientRect();
+      xTo((e.clientX - (r.left + r.width / 2)) * strength);
+      yTo((e.clientY - (r.top + r.height / 2)) * strength);
+    });
+    el.addEventListener('pointerleave', () => {
+      xTo(0);
+      yTo(0);
+    });
+  });
+</script>

@@ -1,0 +1,135 @@
+/* =========================================================================
+   TOKENS — единственное место, где живут цвета.
+   -------------------------------------------------------------------------
+   Как менять палитру:
+     1. Правишь сырые --p-* в блоке нужной палитры (day / night).
+     2. Всё остальное (текст, линии, курсор, WebGL-фон) выводится само.
+   Как добавить новую палитру:
+     скопируй блок [data-palette="dusk"] и дай ему своё имя, затем добавь
+     имя в PALETTES в src/config/palettes.ts — она появится в dev-переключателе.
+   ========================================================================= */
+
+/* ---------- Палитра по умолчанию: "ice" -------------------------------- */
+:root,
+:root[data-theme='day'] {
+  --p-bg: #f3f3ff;          /* фон страницы */
+  --p-surface: #ffffff;     /* карточки, панели */
+  --p-ink: #151f28;         /* основной текст */
+  --p-accent: #1f5fd6;      /* ссылки, акценты */
+  --p-orb-1: #a9baff;       /* WebGL-орбы */
+  --p-orb-2: #ffc6df;
+  --p-orb-3: #aee8ff;
+  --p-particle: #1f5fd6;    /* частицы и след курсора */
+  --p-invert-bg: #0c1d2f;   /* фон «тёмной сцены» в Story */
+  --p-invert-ink: #f3f1f3;  /* текст на «тёмной сцене» */
+  color-scheme: light;
+}
+
+:root[data-theme='night'] {
+  --p-bg: #121a24;
+  --p-surface: #1a2533;
+  --p-ink: #eef0f6;
+  --p-accent: #8fb4ff;
+  --p-orb-1: #2b4f9e;
+  --p-orb-2: #5e2d6e;
+  --p-orb-3: #145e72;
+  --p-particle: #ffffff;
+  --p-invert-bg: #04070c;
+  --p-invert-ink: #f3f1f3;
+  color-scheme: dark;
+}
+
+/* ---------- Альтернативные палитры (для экспериментов) ------------------ */
+:root[data-palette='dusk'][data-theme='day'] {
+  --p-bg: #fbf4ee;
+  --p-surface: #fffaf6;
+  --p-ink: #2a1d1a;
+  --p-accent: #c4452f;
+  --p-orb-1: #ffc9a8;
+  --p-orb-2: #f6b6c9;
+  --p-orb-3: #ffe7a3;
+  --p-particle: #c4452f;
+  --p-invert-bg: #2a1214;
+  --p-invert-ink: #fbefe6;
+}
+:root[data-palette='dusk'][data-theme='night'] {
+  --p-bg: #1c1214;
+  --p-surface: #27191b;
+  --p-ink: #f7e9df;
+  --p-accent: #ff9a7a;
+  --p-orb-1: #5c1f2a;
+  --p-orb-2: #6b3a12;
+  --p-orb-3: #3a1b4a;
+  --p-particle: #ffd2b8;
+  --p-invert-bg: #090506;
+  --p-invert-ink: #f7e9df;
+}
+
+:root[data-palette='forest'][data-theme='day'] {
+  --p-bg: #f1f4ee;
+  --p-surface: #ffffff;
+  --p-ink: #17241c;
+  --p-accent: #2e7d4f;
+  --p-orb-1: #c8e6c9;
+  --p-orb-2: #e6f0b8;
+  --p-orb-3: #b8e0d9;
+  --p-particle: #2e7d4f;
+  --p-invert-bg: #0f2117;
+  --p-invert-ink: #eef4ea;
+}
+:root[data-palette='forest'][data-theme='night'] {
+  --p-bg: #0f1712;
+  --p-surface: #16221a;
+  --p-ink: #e6efe2;
+  --p-accent: #8fd6a8;
+  --p-orb-1: #1d4a2e;
+  --p-orb-2: #3d4a14;
+  --p-orb-3: #134a45;
+  --p-particle: #d9ffe4;
+  --p-invert-bg: #050a07;
+  --p-invert-ink: #e6efe2;
+}
+
+/* ---------- Семантические токены (обычно не трогать) -------------------- */
+:root {
+  /* 0 → обычная сцена, 1 → «тёмная сцена». Анимируется GSAP-ом. */
+  --scene: 0;
+  /* Текст переключается резко (в районе 0.45), чтобы на середине перехода
+     не было серого текста на сером фоне. */
+  --scene-ink: clamp(0, (var(--scene) - 0.4) * 10, 1);
+
+  --color-bg: color-mix(in oklch, var(--p-bg), var(--p-invert-bg) calc(var(--scene) * 100%));
+  --color-text: color-mix(in oklch, var(--p-ink), var(--p-invert-ink) calc(var(--scene-ink) * 100%));
+  --color-surface: color-mix(in oklch, var(--p-surface), var(--p-invert-bg) calc(var(--scene) * 100%));
+  --color-accent: color-mix(in oklch, var(--p-accent), var(--p-invert-ink) calc(var(--scene-ink) * 45%));
+  --color-muted: color-mix(in oklch, var(--color-text) 62%, var(--color-bg));
+  --color-line: color-mix(in oklch, var(--color-text) 16%, var(--color-bg));
+  --color-veil: color-mix(in oklch, var(--color-bg) 72%, transparent);
+  --color-particle: color-mix(in oklch, var(--p-particle), var(--p-invert-ink) calc(var(--scene) * 100%));
+  --color-selection: color-mix(in oklch, var(--p-accent) 28%, transparent);
+
+  /* ---------- Типографика ---------- */
+  --font-display: 'Cormorant Variable', 'Cormorant', Georgia, serif;
+  --font-body: 'Manrope Variable', 'Manrope', system-ui, sans-serif;
+
+  --step--1: clamp(0.8rem, 0.78rem + 0.1vw, 0.875rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --step-1: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
+  --step-2: clamp(1.6rem, 1.4rem + 1vw, 2.25rem);
+  --step-3: clamp(2.2rem, 1.8rem + 2vw, 3.5rem);
+  --step-4: clamp(3rem, 2.2rem + 4vw, 6rem);
+  --step-5: clamp(3.6rem, 2rem + 8vw, 10rem);
+
+  /* ---------- Ритм ---------- */
+  --gutter: clamp(1rem, 0.6rem + 2vw, 2.5rem);
+  --section-space: clamp(6rem, 4rem + 10vw, 14rem);
+  --max-width: 1320px;
+  --radius: 14px;
+
+  /* ---------- Движение ---------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 0.25s;
+  --dur: 0.6s;
+  --dur-slow: 1.1s;
+}

@@ -1,0 +1,149 @@
+---
+import { useT, type Lang } from '../../i18n';
+import { profile } from '../../data/profile';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const t = useT(lang);
+const [user, domain] = profile.email.split('@');
+---
+
+<section class="contact section" id="contact" tabindex="-1" data-scene="1" aria-labelledby="contact-title">
+  <div class="container contact__inner">
+    <p class="eyebrow" data-reveal>{t('contact.eyebrow')}</p>
+    <h2 class="contact__title" id="contact-title" data-reveal style="--reveal-i: 1">{t('contact.title')}</h2>
+    <p class="contact__lead" data-reveal style="--reveal-i: 2">{t('contact.lead')}</p>
+
+    <div class="contact__mail" data-reveal style="--reveal-i: 3">
+      <a class="contact__email" href={`mailto:${profile.email}`} data-cursor="Mail">
+        <span>{user}</span><span class="contact__at">@</span><span>{domain}</span>
+      </a>
+      <button type="button" class="pill" data-copy={profile.email} data-magnetic="0.25">
+        {t('contact.copy')}
+      </button>
+    </div>
+
+    <ul class="contact__links" role="list" data-reveal style="--reveal-i: 4">
+      {
+        profile.links.map((l) => (
+          <li>
+            <a class="pill" href={l.href} target="_blank" rel="noopener" data-magnetic="0.25">
+              {l.label} ↗
+            </a>
+          </li>
+        ))
+      }
+      <li>
+        <a class="pill pill--solid" href={profile.cv} download data-magnetic="0.25">{t('contact.cv')} ↓</a>
+      </li>
+    </ul>
+  </div>
+
+  <p class="toast" role="status" aria-live="polite" data-toast data-text={t('contact.copied')}></p>
+</section>
+
+<style>
+  .contact {
+    outline: none;
+    min-height: 90svh;
+    display: grid;
+    align-items: center;
+  }
+
+  .contact__inner {
+    display: grid;
+    gap: 1.4rem;
+  }
+
+  .contact__title {
+    font-size: var(--step-5);
+    line-height: 0.95;
+    max-width: 15ch;
+  }
+
+  .contact__lead {
+    color: var(--color-muted);
+    max-width: 44ch;
+  }
+
+  .contact__mail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+    margin-top: clamp(1.5rem, 4vw, 3rem);
+  }
+
+  .contact__email {
+    font-family: var(--font-display);
+    font-size: clamp(1.6rem, 1rem + 3.4vw, 4rem);
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+    background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+    transition: background-size 0.6s var(--ease-out);
+  }
+  .contact__email:hover {
+    background-size: 100% 1px;
+  }
+  .contact__at {
+    font-style: italic;
+    color: var(--color-accent);
+  }
+
+  .contact__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  .pill--solid {
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-color: var(--color-text);
+  }
+  .pill--solid:hover {
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    z-index: 200;
+    padding: 0.7rem 1.2rem;
+    border-radius: 999px;
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-size: var(--step--1);
+    translate: -50% 150%;
+    opacity: 0;
+    transition: translate 0.5s var(--ease-out), opacity 0.3s;
+    pointer-events: none;
+  }
+  .toast.is-visible {
+    translate: -50% 0;
+    opacity: 1;
+  }
+</style>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('[data-copy]');
+  const toast = document.querySelector<HTMLElement>('[data-toast]')!;
+  let timer = 0;
+
+  btn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+    } catch {
+      return; // буфер обмена недоступен — ссылка mailto всё равно рядом
+    }
+    toast.textContent = toast.dataset.text ?? '';
+    toast.classList.add('is-visible');
+    clearTimeout(timer);
+    timer = window.setTimeout(() => toast.classList.remove('is-visible'), 2200);
+  });
+</script>
