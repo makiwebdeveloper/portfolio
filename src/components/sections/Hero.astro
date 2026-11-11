@@ -2,7 +2,7 @@
 /**
  * Hero — разворот скетчбука: огромная фамилия маркером во всю ширину и
  * коллаж из мелочей вокруг полароида (координаты лесенкой, таймлайн-пилюли,
- * посадочный талон, чек-лист, лента с этикет-принтера, штамп).
+ * посадочный талон, «уравнение» Frontend + Backend, лента с этикет-принтера, штамп).
  * Без JS всё видно сразу; с JS элементы «выкладываются» по очереди.
  */
 import { pick, useT, type Lang } from '../../i18n';
@@ -18,20 +18,14 @@ const { lang } = Astro.props;
 const t = useT(lang);
 const [first, ...rest] = pick(profile.nameLocal, lang).split(' ');
 const last = rest.join(' ');
-const ringText = `${t('hero.role')} ✶ ${t('hero.place')} ✶ `;
+const ringText = `${t('hero.role')} ✶ ${t('hero.ring')} ✶ `;
 // Ширина фамилии в em (Caveat 700) + запас: кегль = ширина контейнера / fit
 const fit = lang === 'uk' ? 4.9 : 4.4;
 
 const stairs = ['59.33° N', '18.07° E', '(SE)', t('hero.to')];
-const todo = [t('hero.todo.front'), t('hero.todo.back'), t('hero.todo.3d')];
-// Рамка чекбокса от руки — у каждого своя
-const boxes = [
-  'M3.5 4.2c4.6-.6 10.4-.4 14.9.2.5 4.5.4 9.5-.2 14-4.7.4-9.6.3-14.4-.1-.5-4.6-.6-9.5-.3-14.1z',
-  'M4 3.6c4.7.3 9.6-.2 14.4.5.3 4.6.6 9.6 0 14.2-4.8.2-9.7.1-14.5-.3-.3-4.7-.5-9.6.1-14.4z',
-  'M3.8 4c4.6-.5 9.8.1 14.6-.2.2 4.8.2 9.7-.4 14.4-4.6.5-9.4-.1-14 .1-.4-4.8-.6-9.6-.2-14.3z',
-  'M4.2 3.7c4.5.2 9.5-.3 14.1.3.4 4.6.2 9.7-.1 14.3-4.7.3-9.6.4-14.3 0-.6-4.7-.3-9.8.3-14.6z',
-];
-const CHECK = 'M5.5 11.5l4 4.5c2.5-5 6-9.6 10-13';
+// Черта под суммой и кружок вокруг «?» — от руки
+const RULE = 'M2 5c30-2.5 70-3.5 116-1.5';
+const CIRCLE = 'M22 4c-10-1-18 6-18 16s8 17 17 16 16-8 15-17C35 9 27 3 17 6';
 ---
 
 <section class="hero" id="top" tabindex="-1" aria-labelledby="hero-title" data-hero data-frame-label={t('frame.hello')}>
@@ -96,7 +90,7 @@ const CHECK = 'M5.5 11.5l4 4.5c2.5-5 6-9.6 10-13';
             <p class="term__line" style="--n: 4"><b>&gt;</b> status</p>
             <p class="term__line term__out" style="--n: 5">open to work<span class="term__caret"></span></p>
           </div>
-          <figcaption class="hero__caption">{t('hero.place')}</figcaption>
+          <figcaption class="hero__caption">{t('hero.caption')}</figcaption>
         </figure>
 
         <svg class="hero__orbit" viewBox="0 0 520 240" aria-hidden="true" data-draw>
@@ -148,30 +142,29 @@ const CHECK = 'M5.5 11.5l4 4.5c2.5-5 6-9.6 10-13';
           <span class="ticket__stub" aria-hidden="true"><span class="ticket__barcode"></span></span>
         </div>
 
+        <!-- «Уравнение» маркером: Frontend + Backend = Fullstack, + ваша команда = ? -->
         <div class="hero__todo" data-hero-fade>
           <p class="micro"><span data-roam="text">{t('hero.todo')}</span></p>
-          <ul role="list">
-            {
-              todo.map((label, i) => (
-                <li class="is-done">
-                  <svg viewBox="0 0 22 22" aria-hidden="true">
-                    <path d={boxes[i]} />
-                    <path class="todo__check" pathLength="1" d={CHECK} style={`--draw-delay: ${1 + i * 0.25}s`} />
+          <div class="sum">
+            <span class="sum__op" aria-hidden="true"></span><span>{t('hero.todo.front')}</span>
+            <span class="sum__op">+</span><span>{t('hero.todo.back')}</span>
+            <svg class="sum__rule" viewBox="0 0 120 8" preserveAspectRatio="none" aria-hidden="true" data-draw style="--draw-delay: 0.9s">
+              <path pathLength="1" d={RULE} />
+            </svg>
+            <span class="sum__op">=</span><span class="sum__total" data-roam="text" data-roam-dy="0.2">{t('hero.todo.sum')}</span>
+            <a href="#contact" class="sum__team">
+              <span class="sum__op">+</span>
+              <span>
+                {t('hero.todo.team')} ={' '}
+                <span class="sum__q">
+                  ?
+                  <svg viewBox="0 0 40 40" aria-hidden="true">
+                    <path pathLength="1" d={CIRCLE} />
                   </svg>
-                  {label}
-                </li>
-              ))
-            }
-            <li>
-              <a href="#contact" class="todo__team">
-                <svg viewBox="0 0 22 22" aria-hidden="true">
-                  <path d={boxes[3]} />
-                  <path class="todo__check todo__check--hover" pathLength="1" d={CHECK} />
-                </svg>
-                {t('hero.todo.team')}
-              </a>
-            </li>
-          </ul>
+                </span>
+              </span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -558,68 +551,80 @@ const CHECK = 'M5.5 11.5l4 4.5c2.5-5 6-9.6 10-13';
     opacity: 0.85;
   }
 
-  /* --- Чек-лист --- */
+  /* --- Уравнение «Frontend + Backend = Fullstack» --- */
   .hero__todo {
     display: grid;
     gap: 0.3rem;
     rotate: -1.5deg;
   }
-  .hero__todo ul {
+  .sum {
     display: grid;
-    gap: 0.05rem;
-  }
-  .hero__todo li,
-  .todo__team {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    grid-template-columns: 1.1rem auto;
+    column-gap: 0.35rem;
+    align-items: baseline;
     font-family: var(--font-hand);
     font-size: 1.45rem;
     font-weight: 600;
     line-height: 1.15;
+    color: var(--color-muted);
   }
-  .hero__todo svg {
-    width: 1.3rem;
-    flex: none;
+  .sum__op {
+    text-align: center;
+    color: var(--color-accent);
+  }
+  .sum__rule {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 0.5rem;
+    margin-block: 0.05rem 0.1rem;
     overflow: visible;
     fill: none;
     stroke: var(--color-text);
-    stroke-width: 1.6;
+    stroke-width: 2;
     stroke-linecap: round;
-    stroke-linejoin: round;
   }
-  .hero__todo .todo__check {
-    stroke: var(--color-accent);
-    stroke-width: 2.4;
+  .sum__total {
+    color: var(--color-text);
+    font-weight: 700;
   }
-  .hero__todo li.is-done {
-    color: var(--color-muted);
-  }
-  .todo__team {
+  /* Последняя строка — ссылка на контакты, выровнена по той же сетке */
+  .sum__team {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+    margin-top: 0.15rem;
     color: var(--color-accent);
     transition: translate 0.4s var(--ease-back);
   }
-  .todo__team:hover {
+  .sum__team:hover {
     translate: 4px 0;
   }
-  /* «Ваша команда?» — галочка ставится при наведении */
-  .hero__todo .todo__check--hover {
+  .sum__q {
+    position: relative;
+    display: inline-block;
+    margin-left: 0.2em;
+  }
+  /* Кружок вокруг «?» обводится при наведении */
+  .sum__q svg {
+    position: absolute;
+    left: -0.4em;
+    top: -0.05em;
+    width: calc(100% + 0.8em);
+    height: calc(100% + 0.1em);
+    max-width: none; /* reset svg { max-width: 100% } сжал бы кружок до ширины «?» */
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2.2;
+    stroke-linecap: round;
     stroke-dasharray: 1 2;
     stroke-dashoffset: 1.01;
-    transition: stroke-dashoffset 0.4s var(--ease-out);
+    transition: stroke-dashoffset 0.45s var(--ease-out);
   }
-  .todo__team:hover .todo__check--hover,
-  .todo__team:focus-visible .todo__check--hover {
+  .sum__team:hover .sum__q svg,
+  .sum__team:focus-visible .sum__q svg {
     stroke-dashoffset: 0;
-  }
-  /* Галочки сделанных пунктов рисуются вместе с появлением */
-  :global(.js) .hero__todo li.is-done .todo__check {
-    stroke-dasharray: 1 2;
-    stroke-dashoffset: 1.01;
-  }
-  :global(.js) .hero.is-drawn .hero__todo li.is-done .todo__check {
-    stroke-dashoffset: 0;
-    transition: stroke-dashoffset 0.45s var(--ease-out) var(--draw-delay);
   }
 
   /* --- Стикмен у полароида --- */

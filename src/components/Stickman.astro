@@ -1031,83 +1031,14 @@ import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
     scheduleIdle();
   }
 
+  /** Свободная «жизнь» только в Hero; в остальных секциях он идёт по сценарию: прыжок → поза точки. */
   function scheduleIdle(min = 2.2, max = 4.5) {
     idleCall?.kill();
-    idleCall = gsap.delayedCall(gsap.utils.random(min, max), idle);
+    idleCall = target === 0 ? gsap.delayedCall(gsap.utils.random(min, max), idle) : null;
   }
 
-  /** Постоянная «жизнь» на блоке: пробежка, подскок, помахать, оглянуться. */
   function idle() {
-    if (target === 0) {
-      roam();
-      return;
-    }
-    const s = stations[target];
-    const vis = st.y > scrollY && st.y < scrollY + innerHeight;
-    const busy =
-      jumping || running || target <= 0 || !!s?.line || de.classList.contains('is-still');
-    if (!s || busy || !vis) {
-      scheduleIdle();
-      return;
-    }
-    const r = Math.random();
-    const wide = s.x1 - s.x0 > 140 && s.name !== 'plane';
-    if (wide && r < 0.45) patrol(s);
-    else if (r < 0.7) hop();
-    else if (r < 0.88 && s.name !== 'wave') wave();
-    else look();
-  }
-
-  /** Пробежка по своему блоку: в дальний конец, оглядеться и назад. */
-  function patrol(s: Station) {
-    const far = Math.abs(s.x - s.x0) > Math.abs(s.x1 - s.x) ? s.x0 : s.x1;
-    const tx = far + (s.x - far) * gsap.utils.random(0, 0.25);
-    const walk = Math.random() < 0.65;
-    runTo(tx, s.y, () => {
-      offX = st.x - (stations[target]?.x ?? st.x);
-      setPose('stand', 0.25);
-      idleCall = gsap.delayedCall(gsap.utils.random(0.5, 1.1), () => {
-        const home = stations[target];
-        if (!home) return;
-        runTo(home.x, home.y, () => arrive(target), walk ? { gait: 'walk' } : { speed: rnd(220, 280) });
-      });
-    }, walk ? { gait: 'walk' } : { speed: rnd(220, 300) });
-  }
-
-  /** Подпрыгнуть на месте: присел — вверх — приземлился с пружинкой. */
-  function hop() {
-    const name = stations[target].name;
-    const h = (24 + Math.random() * 18) * st.k;
-    tl?.kill();
-    tl = gsap.timeline({ onComplete: () => scheduleIdle() });
-    tl.add(() => setPose('crouch', 0.12));
-    tl.to(st, { sx: 1.12, sy: 0.84, propsK: 0, duration: 0.13, ease: 'power2.out' });
-    tl.add(() => setPose('jump', 0.15));
-    tl.to(st, { hop: -h, sx: 0.92, sy: 1.1, duration: 0.24, ease: 'power2.out' });
-    tl.to(st, { hop: 0, sx: 1, sy: 1, duration: 0.2, ease: 'power2.in' });
-    tl.add(() => setPose(name, 0.3));
-    tl.to(st, { sx: 1.16, sy: 0.84, duration: 0.07 });
-    tl.to(st, { sx: 1, sy: 1, propsK: 1, duration: 0.5, ease: 'elastic.out(1, 0.4)' });
-  }
-
-  function wave() {
-    const name = stations[target].name;
-    setPose('wave', 0.3);
-    gsap.to(st, { propsK: 0, duration: 0.2 });
-    idleCall = gsap.delayedCall(gsap.utils.random(1.2, 2), () => {
-      setPose(name, 0.35);
-      gsap.to(st, { propsK: 1, duration: 0.3 });
-      scheduleIdle();
-    });
-  }
-
-  function look() {
-    const face = st.face;
-    st.face = -face as 1 | -1;
-    idleCall = gsap.delayedCall(gsap.utils.random(0.7, 1.2), () => {
-      st.face = face;
-      scheduleIdle();
-    });
+    if (target === 0) roam();
   }
 
   interface Spot {

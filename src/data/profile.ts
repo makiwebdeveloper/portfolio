@@ -9,6 +9,8 @@ export const profile = {
   } as Localized,
   email: "makiwebdeveloper@gmail.com",
   cv: "/Illia-Makovetskyi-Resume.pdf",
+  // Старое портфолио (3D-комната с ретро-компьютером), ссылка-пасхалка в футере
+  oldSite: "https://makiwebdeveloper.vercel.app",
   // TODO: put the real profile URLs here
   links: [
     { label: "GitHub", href: "https://github.com/makiwebdeveloper" },

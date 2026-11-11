@@ -10,7 +10,7 @@ export const defaultLang: Lang = 'en';
 const en = {
   'meta.title': 'Illia Makovetskyi — Fullstack Developer',
   'meta.description':
-    'Fullstack developer in Stockholm building end-to-end products: e-commerce, AI tools, real-time apps and interactive 3D.',
+    'Fullstack developer building end-to-end products: e-commerce, AI tools, real-time apps and interactive 3D.',
 
   'nav.label': 'Main',
   'nav.story': 'Story',
@@ -31,17 +31,19 @@ const en = {
 
   'hero.role': 'Fullstack Developer',
   'hero.place': 'Stockholm, Sweden',
+  'hero.ring': 'From idea to deploy',
+  'hero.caption': 'Writing code since 2020',
   'hero.greeting': 'Hi, I’m',
   'hero.scroll': 'Scroll',
   'hero.available': 'Open to new roles · 2026',
   'hero.ticket': 'Boarding pass',
   'hero.from': 'Kharkiv',
   'hero.to': 'Stockholm',
-  'hero.todo': 'Checklist',
+  'hero.todo': 'Quick maths',
   'hero.todo.front': 'Frontend',
   'hero.todo.back': 'Backend',
-  'hero.todo.3d': 'Real-time & 3D',
-  'hero.todo.team': 'Your team?',
+  'hero.todo.sum': 'Fullstack',
+  'hero.todo.team': 'your team',
   'frame.hello': 'Hello',
 
   'intro.eyebrow': 'In short',
@@ -49,7 +51,7 @@ const en = {
     'I turn ideas into working digital products — from interfaces and backends to real-time features and interactive 3D. I care about the engineering and the person on the other side of the screen equally.',
 
   'story.eyebrow': 'The story so far',
-  'story.title': 'From Kharkiv to Stockholm',
+  'story.title': 'From `hello world` to production',
   'story.next': 'Next chapter',
   'story.prev': 'Previous chapter',
   'story.skip': 'Skip',
@@ -78,13 +80,14 @@ const en = {
 
   'contact.eyebrow': 'Contact',
   'contact.title': 'Let’s build something together',
-  'contact.lead': 'I’m based in Stockholm and open to fullstack and frontend roles.',
+  'contact.lead': 'Have a role, a project or just a question? Drop me a line.',
   'contact.copy': 'Copy',
   'contact.copied': 'Email copied',
   'contact.cv': 'Download CV',
 
   'footer.built': 'Drawn by hand with Astro, GSAP and Lenis.',
   'footer.top': 'Back to top',
+  'footer.v1': 'psst… v1 lived in a 3D room',
   'footer.thanks': 'Thanks for scrolling all the way down. Have a great day!',
 };
 
@@ -93,7 +96,7 @@ export type UIKey = keyof typeof en;
 const sv: Record<UIKey, string> = {
   'meta.title': 'Illia Makovetskyi — Fullstackutvecklare',
   'meta.description':
-    'Fullstackutvecklare i Stockholm som bygger kompletta produkter: e-handel, AI-verktyg, realtidsappar och interaktiv 3D.',
+    'Fullstackutvecklare som bygger kompletta produkter: e-handel, AI-verktyg, realtidsappar och interaktiv 3D.',
 
   'nav.label': 'Huvudmeny',
   'nav.story': 'Historia',
@@ -114,17 +117,19 @@ const sv: Record<UIKey, string> = {
 
   'hero.role': 'Fullstackutvecklare',
   'hero.place': 'Stockholm, Sverige',
+  'hero.ring': 'Från idé till drift',
+  'hero.caption': 'Kodar sedan 2020',
   'hero.greeting': 'Hej, jag heter',
   'hero.scroll': 'Scrolla',
   'hero.available': 'Öppen för nya roller · 2026',
   'hero.ticket': 'Boardingkort',
   'hero.from': 'Charkiv',
   'hero.to': 'Stockholm',
-  'hero.todo': 'Checklista',
+  'hero.todo': 'Snabb matte',
   'hero.todo.front': 'Frontend',
   'hero.todo.back': 'Backend',
-  'hero.todo.3d': 'Realtid & 3D',
-  'hero.todo.team': 'Ditt team?',
+  'hero.todo.sum': 'Fullstack',
+  'hero.todo.team': 'ditt team',
   'frame.hello': 'Hej',
 
   'intro.eyebrow': 'Kort sagt',
@@ -132,7 +137,7 @@ const sv: Record<UIKey, string> = {
     'Jag gör idéer till fungerande digitala produkter — från gränssnitt och backend till realtidsfunktioner och interaktiv 3D. Tekniken och människan på andra sidan skärmen är lika viktiga för mig.',
 
   'story.eyebrow': 'Historien hittills',
-  'story.title': 'Från Charkiv till Stockholm',
+  'story.title': 'Från `hello world` till produktion',
   'story.next': 'Nästa kapitel',
   'story.prev': 'Föregående kapitel',
   'story.skip': 'Hoppa över',
@@ -161,20 +166,21 @@ const sv: Record<UIKey, string> = {
 
   'contact.eyebrow': 'Kontakt',
   'contact.title': 'Låt oss bygga något tillsammans',
-  'contact.lead': 'Jag bor i Stockholm och är öppen för roller inom fullstack och frontend.',
+  'contact.lead': 'Har du en roll, ett projekt eller bara en fråga? Skriv till mig.',
   'contact.copy': 'Kopiera',
   'contact.copied': 'E-post kopierad',
   'contact.cv': 'Ladda ner CV',
 
   'footer.built': 'Handritad med Astro, GSAP och Lenis.',
   'footer.top': 'Till toppen',
+  'footer.v1': 'psst… v1 bodde i ett 3D-rum',
   'footer.thanks': 'Tack för att du scrollade ända hit. Ha en fin dag!',
 };
 
 const uk: Record<UIKey, string> = {
   'meta.title': 'Ілля Маковецький — Fullstack-розробник',
   'meta.description':
-    'Fullstack-розробник у Стокгольмі: створюю продукти від ідеї до запуску — e-commerce, AI-інструменти, real-time застосунки та інтерактивне 3D.',
+    'Fullstack-розробник: створюю продукти від ідеї до запуску — e-commerce, AI-інструменти, real-time застосунки та інтерактивне 3D.',
 
   'nav.label': 'Головне меню',
   'nav.story': 'Історія',
@@ -195,17 +201,19 @@ const uk: Record<UIKey, string> = {
 
   'hero.role': 'Fullstack-розробник',
   'hero.place': 'Стокгольм, Швеція',
+  'hero.ring': 'Від ідеї до деплою',
+  'hero.caption': 'Пишу код з 2020',
   'hero.greeting': 'Привіт, я',
   'hero.scroll': 'Гортайте',
   'hero.available': 'Відкритий до нових ролей · 2026',
   'hero.ticket': 'Посадковий талон',
   'hero.from': 'Харків',
   'hero.to': 'Стокгольм',
-  'hero.todo': 'Чекліст',
+  'hero.todo': 'Проста математика',
   'hero.todo.front': 'Frontend',
   'hero.todo.back': 'Backend',
-  'hero.todo.3d': 'Real-time і 3D',
-  'hero.todo.team': 'Ваша команда?',
+  'hero.todo.sum': 'Fullstack',
+  'hero.todo.team': 'ваша команда',
   'frame.hello': 'Привіт',
 
   'intro.eyebrow': 'Коротко',
@@ -213,7 +221,7 @@ const uk: Record<UIKey, string> = {
     'Я перетворюю ідеї на робочі цифрові продукти — від інтерфейсів і бекенду до real-time функцій та інтерактивного 3D. Для мене однаково важливі і інженерія, і людина по той бік екрана.',
 
   'story.eyebrow': 'Історія',
-  'story.title': 'Від Харкова до Стокгольма',
+  'story.title': 'Від `hello world` до продакшну',
   'story.next': 'Наступний розділ',
   'story.prev': 'Попередній розділ',
   'story.skip': 'Пропустити',
@@ -242,13 +250,14 @@ const uk: Record<UIKey, string> = {
 
   'contact.eyebrow': 'Контакти',
   'contact.title': 'Створімо щось разом',
-  'contact.lead': 'Я живу в Стокгольмі й відкритий до fullstack- та frontend-ролей.',
+  'contact.lead': 'Маєте вакансію, проєкт чи просто питання? Напишіть мені.',
   'contact.copy': 'Копіювати',
   'contact.copied': 'Email скопійовано',
   'contact.cv': 'Завантажити CV',
 
   'footer.built': 'Намальовано від руки на Astro, GSAP та Lenis.',
   'footer.top': 'Нагору',
+  'footer.v1': 'пс… v1 жила в 3D-кімнаті',
   'footer.thanks': 'Дякую, що догортали до кінця. Гарного дня!',
 };
 

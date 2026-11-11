@@ -38,6 +38,25 @@ const band = Array.from({ length: 4 }, () => doodles).flat();
       </p>
       <p class="footer__text">{t('footer.thanks')}</p>
       <p class="micro">{t('footer.built')}</p>
+      <!-- Пасхалка: ретро-компьютер из 3D-комнаты старого портфолио -->
+      <a
+        class="footer__v1 micro"
+        href={profile.oldSite}
+        target="_blank"
+        rel="noopener"
+        data-cursor="v1"
+      >
+        <svg class="footer__pc" viewBox="0 0 40 38" aria-hidden="true">
+          <rect x="5" y="2" width="30" height="24" rx="7" />
+          <rect x="10" y="7" width="20" height="14" rx="3.5" />
+          <g class="footer__pc-eyes">
+            <path d="M17 11.5v4M23 11.5v4" />
+          </g>
+          <path d="M13 26.5v3.5h14v-3.5" />
+          <path d="M7 34.5c8-1 18-1 26 0" />
+        </svg>
+        <span>{t('footer.v1')} <span aria-hidden="true">↗</span></span>
+      </a>
     </div>
 
     <a href="#top" class="footer__star">
@@ -106,6 +125,61 @@ const band = Array.from({ length: 4 }, () => doodles).flat();
   }
   .footer__text {
     font-weight: 600;
+  }
+
+  /* Пасхалка v1: тихая ссылка с рисованным ретро-монитором */
+  .footer__v1 {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    justify-self: start;
+    margin-top: 0.3rem;
+    text-decoration: none;
+    transition: color 0.25s;
+  }
+  .footer__pc {
+    width: 1.9rem;
+    height: auto;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: rotate 0.5s var(--ease-back);
+  }
+  /* Глазки на экране — акцентом, как зелёные глаза у 3D-компьютера */
+  .footer__pc-eyes {
+    stroke: var(--color-accent);
+    stroke-width: 2.4;
+    transform-box: fill-box;
+    transform-origin: center;
+    transition: translate 0.3s var(--ease-back);
+  }
+  .footer__v1:hover,
+  .footer__v1:focus-visible {
+    color: var(--color-text);
+  }
+  .footer__v1:hover .footer__pc,
+  .footer__v1:focus-visible .footer__pc {
+    rotate: -8deg;
+  }
+  .footer__v1:hover .footer__pc-eyes,
+  .footer__v1:focus-visible .footer__pc-eyes {
+    translate: 2px 0;
+    animation: pc-blink 0.35s 0.25s;
+  }
+  @keyframes pc-blink {
+    50% {
+      scale: 1 0.15;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .footer__pc,
+    .footer__pc-eyes {
+      transition: none;
+      animation: none !important;
+    }
   }
 
   /* Большая звезда-кнопка */

@@ -20,7 +20,11 @@ const { lang } = Astro.props;
 const t = useT(lang);
 const firstYear = chapters[0].year.split('');
 const tilts = [-1.6, 1.2, -0.8, 1.6, -1.2, 0.9];
-const words = t('story.title').split(' ');
+// Слова заголовка; фраза в `обратных кавычках` — одно «слово»-код (моно-плашка)
+const words = (t('story.title').match(/`[^`]+`|\S+/g) ?? []).map((w) => ({
+  text: w.replaceAll('`', ''),
+  code: w.startsWith('`'),
+}));
 const total = String(chapters.length).padStart(2, '0');
 
 // Пружина: витки эллипсов друг под другом, одна ломаная (рисуется dashoffset-ом)
@@ -56,8 +60,8 @@ const coil = (() => {
             {
               words.map((w, i) => (
                 <>
-                  <span class="kw" data-kw={i}>
-                    {w}
+                  <span class:list={['kw', { 'kw--code': w.code }]} data-kw={i}>
+                    {w.text}
                   </span>{' '}
                 </>
               ))
@@ -151,6 +155,10 @@ const coil = (() => {
                   {pick(c.place, lang)}
                 </p>
                 <h3 class="story__chapter-title">{pick(c.title, lang)}</h3>
+                <p class="story__role">
+                  {pick(c.role, lang)}
+                  <span class="story__period">{c.period}</span>
+                </p>
                 <p class="story__text">{pick(c.text, lang)}</p>
               </li>
             ))
@@ -184,6 +192,29 @@ const coil = (() => {
   }
   .kw {
     display: inline-block;
+    /* запас под выносные элементы Caveat: иначе слой (will-change) в Safari обрезает хвосты букв */
+    padding: 0.08em 0.14em;
+    margin: -0.08em -0.14em;
+  }
+  /* `hello world` — кусочек кода на тёмной плашке, как терминал в Hero */
+  .kw--code {
+    margin-inline: 0.04em;
+    padding: 0.16em 0.4em 0.2em;
+    font-family: var(--font-mono);
+    font-size: 0.4em;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    vertical-align: 0.5em;
+    color: var(--color-bg);
+    background: var(--color-text);
+    border-radius: var(--wobble-soft);
+    rotate: -2deg;
+  }
+  .kw--code::before {
+    content: '> ';
+    color: var(--color-accent);
   }
   .story__since {
     justify-self: start;
@@ -237,6 +268,23 @@ const coil = (() => {
     text-transform: uppercase;
     color: var(--color-muted);
   }
+  /* Должность и период: короткая строка под заголовком главы */
+  .story__role {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.2em 0.8em;
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.3;
+  }
+  .story__period {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+  }
   .story__index {
     font-family: var(--font-hand);
     font-size: 1.3rem;
@@ -278,7 +326,8 @@ const coil = (() => {
   }
   .story.is-pinned .story__title {
     font-size: var(--step-5);
-    max-width: 12ch;
+    /* «From > hello world» должно влезать в одну строку */
+    max-width: 15ch;
     line-height: 0.95;
   }
   .story.is-pinned .story__since {
