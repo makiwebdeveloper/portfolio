@@ -8,4 +8,6 @@ export default defineConfig({
     routing: { prefixDefaultLocale: false },
   },
   build: { inlineStylesheets: 'auto' },
+  // предзагрузка по наведению — только для ссылок с data-astro-prefetch (языки)
+  prefetch: { prefetchAll: false, defaultStrategy: 'hover' },
 });

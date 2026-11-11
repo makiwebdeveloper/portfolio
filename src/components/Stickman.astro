@@ -1,0 +1,1594 @@
+---
+/**
+ * Стикмен-проводник. Живёт на самом контенте: точки [data-perch] стоят
+ * на каждом блоке (абзацы, концы подчёркиваний, строки проектов, ленты
+ * навыков, карточки глав, футер). Он всегда держится в «полосе» экрана:
+ * когда его блок уезжает, по-мультяшному прыгает на блок в кадре
+ * (или бежит, если тот на той же высоте):
+ * замах → вытягивание → полёт по дуге (дальние прыжки с сальто) →
+ * приземление с приплющиванием и облачком пыли → поза станции.
+ *
+ * Производительность: прыжок идёт по времени (GSAP), а не по скроллу.
+ * На скролл — только лёгкая проверка «какая станция активна» раз в кадр.
+ * Пока стикмен вне экрана, ничего не перерисовывается.
+ * Пока стоит, «прилипает» к своему блоку (едет вместе со sticky-карточками
+ * Story и блоками, которые появляются) и постоянно чем-то занят:
+ * пробегает по блоку, подпрыгивает, машет, оглядывается.
+ * При reduced motion бегун выключен, видны статичные станции в полях
+ * (StickStation.astro) — они же иллюстрации без JS.
+ *
+ * В Hero он не стоит на месте: сам гуляет по всему, что там есть
+ * (буквы имени, подчёркивание, штамп, полароид, талон, чек-лист…):
+ * неторопливо, «человек на фоне»: в основном ходит, стоит, сидит, оглядывается;
+ * изредка пробежка, прыжок с разбега, срыв с края, вприпрыжку, сальто.
+ */
+import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
+---
+
+<div class="runner" data-runner aria-hidden="true">
+  <svg class="stick runner__svg" viewBox="-45 -88 90 92" width="90" height="92" data-spin>
+    <g data-flip>
+      <g class="runner__body">
+        <polyline data-part="legB"></polyline>
+        <polyline data-part="armB"></polyline>
+        <polyline data-part="torso"></polyline>
+        <polyline data-part="legF"></polyline>
+        <polyline data-part="armF"></polyline>
+        <path class="stick__head" d={HEAD_PATH} data-part="head"></path>
+      </g>
+      <g class="stick__props runner__props" data-props>
+        <path></path><path></path><path></path><path></path><path></path>
+      </g>
+    </g>
+  </svg>
+</div>
+
+<svg class="jump-arc" data-arc aria-hidden="true" focusable="false"><path></path></svg>
+
+<div class="puff" data-puff aria-hidden="true">
+  <svg viewBox="-34 -16 68 18" width="68" height="18">
+    <path d="M-10 -2c-6-1-12-4-18-9M10 -2c6-1 12-4 18-9M-4 -4c-1-3-1-6 0-9M4 -4c1-3 1-6 0-9"></path>
+  </svg>
+</div>
+
+<div class="plane" data-plane aria-hidden="true">
+  <svg viewBox="-12 -9 24 18" width="34" height="26"><path d={PLANE_PATH}></path></svg>
+</div>
+
+<style>
+  .runner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 90px;
+    height: 92px;
+    margin: -88px 0 0 -45px;
+    /* приплющивание/вытягивание — от стоп */
+    transform-origin: 45px 88px;
+    z-index: 2;
+    pointer-events: none;
+    display: none;
+    will-change: transform;
+  }
+  :global(.has-runner) .runner {
+    display: block;
+  }
+  /* сальто — вокруг центра тела */
+  .runner__svg {
+    transform-origin: 50% 58%;
+  }
+  /* Без SVG-фильтра: он перерисовывался бы каждый кадр и делал фигуру «рваной» */
+  .runner__body {
+    fill: none;
+    stroke: var(--color-text);
+    stroke-width: 2.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .runner__props {
+    filter: none;
+  }
+  /* чёрточки скорости и капли пота, когда догоняет линию */
+  .runner__props .is-fx {
+    stroke: var(--color-muted);
+    stroke-width: 1.4;
+  }
+  .jump-arc {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+  }
+  .jump-arc path {
+    fill: none;
+    stroke: var(--color-muted);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-dasharray: 0.1 11;
+  }
+
+  .puff {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: -16px 0 0 -34px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+  }
+  .puff svg {
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-muted);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .plane {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: -13px 0 0 -17px;
+    z-index: 3;
+    pointer-events: none;
+    opacity: 0;
+    will-change: transform;
+  }
+  .plane path {
+    fill: var(--color-surface);
+    stroke: var(--color-accent);
+    stroke-width: 1.4;
+    stroke-linejoin: round;
+  }
+</style>
+
+
+<script>
+  import { gsap, reducedMotion, fontsReady } from '../lib/motion';
+  import {
+    figure,
+    pose,
+    mix,
+    propsFor,
+    pts,
+    PENCIL_HALF,
+    pencilProps,
+    reachArms,
+    type AnyPose,
+    type Figure,
+    type Pose,
+    type PoseName,
+    type Pt,
+  } from '../lib/stickman';
+
+  const de = document.documentElement;
+  const runner = document.querySelector<HTMLElement>('[data-runner]')!;
+  const spin = runner.querySelector<SVGSVGElement>('[data-spin]')!;
+  const flip = runner.querySelector<SVGGElement>('[data-flip]')!;
+  const part = (n: string) => runner.querySelector<SVGElement>(`[data-part="${n}"]`)!;
+  const parts = {
+    legB: part('legB'),
+    armB: part('armB'),
+    torso: part('torso'),
+    legF: part('legF'),
+    armF: part('armF'),
+    head: part('head'),
+  };
+  const propsG = runner.querySelector<SVGGElement>('[data-props]')!;
+  const propEls = Array.from(propsG.querySelectorAll('path'));
+  const arc = document.querySelector<SVGSVGElement>('[data-arc]')!;
+  const arcPath = arc.querySelector('path')!;
+  const puff = document.querySelector<HTMLElement>('[data-puff]')!;
+  const plane = document.querySelector<HTMLElement>('[data-plane]')!;
+
+  interface Station {
+    name: PoseName;
+    x: number;
+    y: number;
+    h: number;
+    scale: number;
+    face: 1 | -1;
+    x0: number; // поверхность, по которой можно пробежаться
+    x1: number;
+    /** точка на линии (data-perch-edge="path"): кончик, касательная, стирает ли */
+    line?: { x: number; y: number; tx: number; ty: number; erase: boolean; seq: string };
+  }
+
+  let stations: Station[] = [];
+  let enabled = false;
+  let target = -1; // станция, на которой стоит/куда летит стикмен
+  let jumping = false;
+  let tl: gsap.core.Timeline | null = null;
+  let thrown = false;
+  let running = false;
+  let idleCall: gsap.core.Tween | null = null;
+
+  /** Всё, что анимирует GSAP. Рендер читает это состояние. */
+  const st = {
+    x: 0,
+    y: 0,
+    sx: 1, // приплющивание/вытягивание
+    sy: 1,
+    rot: 0, // сальто
+    tilt: 0, // наклон вокруг стоп (на горке)
+    k: 1.3, // масштаб фигуры
+    face: 1 as 1 | -1,
+    to: 'stand' as AnyPose,
+    mixK: 1, // 0 → fromPose, 1 → поза `to`
+    propsK: 0, // видимость реквизита станции
+    phase: 0, // фаза шага при беге (от пройденного пути)
+    hop: 0, // подскок на месте (поверх «прилипания» к блоку)
+  };
+  let offX = 0; // где стоит относительно точки блока (после пробежки)
+  let fromPose: Pose = pose('stand');
+  let lastPose: Pose = fromPose;
+  let poseTween: gsap.core.Tween | null = null;
+
+  /** Плавный переход из текущей позы в новую. */
+  function setPose(name: AnyPose, duration: number) {
+    poseTween?.kill();
+    fromPose = lastPose;
+    st.to = name;
+    st.mixK = 0;
+    poseTween = gsap.to(st, { mixK: 1, duration, ease: 'power2.out' });
+  }
+
+  const pageW = () => de.clientWidth;
+
+  /* ---------------- Прогулка по Hero ----------------
+     На станции Hero стикмен сам гуляет по всему, что там есть.
+     Поверхности — элементы с [data-roam]:
+       text — верх строки текста (по Range, без пустых полей строки),
+       box  — верхний край блока (с учётом наклона бумажки),
+       mid  — середина высоты (подчёркивание);
+     data-roam-dy — сдвиг вниз в долях высоты (у рукописных букв пусто сверху),
+     data-roam-span="0.4 0.6" — где по ширине можно стоять (верх штампа, звезды).
+     Переходы: на той же высоте рядом — бежит или идёт; ниже и в стороне —
+     добегает до края и срывается вниз (машет руками); иначе прыгает с разбега
+     или с места, изредка с сальто; прыжки замедлены (slow). После приземления
+     делает пару шагов по инерции, редко кувыркается. На блоке — в основном
+     шагает, сидит, оглядывается, машет; реже пробежка с торможением,
+     вприпрыжку, сальто. Между действиями (flow) обычно стоит 1–3.5 с:
+     он фон, а не главный герой, глаз не должен постоянно на него дёргаться. */
+
+  interface Surf {
+    el: Element | null; // null — станция Hero (у полароида)
+    ex0: number; // края элемента
+    ex1: number;
+    x0: number; // где можно стоять
+    x1: number;
+    xc: number; // середина верхнего края
+    yc: number;
+    slope: number; // наклон (бумажки повёрнуты)
+  }
+  const yAt = (s: Surf, x: number) => s.yc + (x - s.xc) * s.slope;
+  const rnd = gsap.utils.random;
+
+  type Mode = 'home' | 'roam';
+  let mode: Mode = 'home';
+  let here: Surf | null = null; // где стоит (null — на станции)
+  const heroEl = document.querySelector<HTMLElement>('[data-hero]');
+  const rad = (d: number) => (d * Math.PI) / 180;
+
+  /** Суммарный поворот элемента и предков внутри Hero (rotate + transform). */
+  function angleOf(el: Element) {
+    let a = 0;
+    for (let n: Element | null = el; n && n !== heroEl; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      a += parseFloat(cs.rotate) || 0;
+      if (cs.transform && cs.transform !== 'none') {
+        const m = new DOMMatrixReadOnly(cs.transform);
+        a += (Math.atan2(m.b, m.a) * 180) / Math.PI;
+      }
+    }
+    return a;
+  }
+
+  function surfOf(el: HTMLElement | SVGElement): Surf | null {
+    const d = el.dataset;
+    let r: DOMRect;
+    if (d.roam === 'text') {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      r = range.getBoundingClientRect();
+    } else r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    const a = rad(angleOf(el));
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    // размеры без поворота: у блока — offset*, у текста — оценка по рамке
+    const w = el instanceof HTMLElement && d.roam === 'box' ? el.offsetWidth : r.width;
+    const h =
+      el instanceof HTMLElement && d.roam === 'box'
+        ? el.offsetHeight
+        : Math.max(r.height * 0.4, r.height - r.width * Math.abs(sn));
+    const cx = r.left + scrollX + r.width / 2;
+    const cy = r.top + scrollY + r.height / 2;
+    // от центра вверх по повёрнутой оси
+    const up = d.roam === 'mid' ? h * 0.05 : h / 2 - (Number(d.roamDy) || 0) * h;
+    const xc = cx + sn * up;
+    const yc = cy - c * up;
+    const ex0 = xc - (c * w) / 2;
+    const ex1 = xc + (c * w) / 2;
+    const span = d.roamSpan?.split(' ').map(Number) ?? [0, 1];
+    const pad = Math.min(12 * st.k, w * 0.2);
+    const x0 = Math.max(ex0 + span[0] * (ex1 - ex0), ex0 + pad, 24);
+    const x1 = Math.min(ex0 + span[1] * (ex1 - ex0), ex1 - pad, pageW() - 24);
+    if (x1 < x0) return null;
+    return { el, ex0, ex1, x0, x1, xc, yc, slope: Math.tan(a) };
+  }
+
+  function homeSurf(): Surf {
+    const s = stations[0];
+    return { el: null, ex0: s.x, ex1: s.x, x0: s.x, x1: s.x, xc: s.x, yc: s.y, slope: 0 };
+  }
+
+  /** Поверхности Hero в кадре (голова не уходит за верх экрана). */
+  function surfaces(): Surf[] {
+    const top = scrollY + 100 * st.k;
+    const bottom = scrollY + innerHeight - 12;
+    const list = Array.from(document.querySelectorAll<HTMLElement | SVGElement>('[data-roam]'))
+      .map(surfOf)
+      .filter((s): s is Surf => !!s && s.yc > top && s.yc < bottom);
+    const home = homeSurf();
+    if (home.yc > top && home.yc < bottom) list.push(home);
+    return list;
+  }
+
+  function clearRoam() {
+    mode = 'home';
+    here = null;
+  }
+
+  const same = (a: Surf | null, b: Surf) => (a ? a.el === b.el : b.el === null);
+
+  /** Решает, что делать дальше: повозиться на своём блоке или перебраться куда-нибудь. */
+  function roam() {
+    const vis = st.y > scrollY && st.y < scrollY + innerHeight;
+    if (jumping || running || de.classList.contains('is-still') || !vis || !heroEl?.classList.contains('is-drawn')) {
+      scheduleIdle(0.6, 1.2);
+      return;
+    }
+    mode = 'roam';
+    const list = surfaces();
+    // блок, на котором стоит, мог сдвинуться — берём свежий замер
+    const cur = here && list.find((s) => s.el === here!.el);
+    if (here && !cur) {
+      // блок пропал из кадра/раскладки — домой
+      here = null;
+      jumpTo(0);
+      return;
+    }
+    if (cur) here = cur;
+    if (here && here.el && Math.random() < 0.7) {
+      play(here);
+      return;
+    }
+    // куда: подальше от текущего места
+    const opts = list.filter((s) => !same(here, s));
+    if (!opts.length) {
+      if (here?.el) play(here);
+      else scheduleIdle(0.6, 1.2);
+      return;
+    }
+    // перебирается подальше, чтобы не топтаться в одном углу: вероятнее всего
+    // средне-дальние блоки (~60% от самого дальнего), соседи почти никогда
+    const ds = opts.map((s) => Math.hypot(s.xc - st.x, s.yc - st.y));
+    const dmax = Math.max(...ds, 1);
+    const w = ds.map((d) => (d < 140 ? 0.03 : 0.08 + Math.exp(-(((d - 0.6 * dmax) / (0.32 * dmax)) ** 2))));
+    let q = Math.random() * w.reduce((a, b) => a + b, 0);
+    let pick = opts[0];
+    for (let n = 0; n < opts.length; n++) if ((q -= w[n]) <= 0) {
+      pick = opts[n];
+      break;
+    }
+    moveTo(pick);
+  }
+
+  const clampX = (b: Surf, x: number) => Math.min(b.x1, Math.max(b.x0, x));
+  const after = (min: number, max: number, fn: () => void) => {
+    idleCall?.kill();
+    idleCall = gsap.delayedCall(rnd(min, max), fn);
+  };
+
+  /** Что дальше: чаще сразу следующее действие (без стойки), иногда короткая передышка. */
+  function flow() {
+    const r = Math.random();
+    if (r < 0.3) after(0.1, 0.3, roam);
+    else {
+      setPose('stand', 0.4);
+      if (r < 0.8) after(1, 2, roam);
+      else after(2.2, 3.6, roam);
+    }
+  }
+
+  /** Встал на блок b. */
+  function landed(b: Surf) {
+    here = b;
+    if (b.el === null) {
+      // вернулся на станцию: её поза и реквизит, тут можно и постоять
+      const s = stations[0];
+      st.face = s.face;
+      setPose(s.name, 0.35);
+      gsap.to(st, { propsK: 1, duration: 0.3 });
+      after(1.5, 3, roam);
+    } else flow();
+  }
+
+  /** Тормозит юзом после рывка (проезжает ещё чуть-чуть). */
+  function skid(b: Surf, then: () => void) {
+    const x = clampX(b, st.x + st.face * rnd(8, 16) * st.k);
+    const m = { x: st.x };
+    tl?.kill();
+    tl = gsap.timeline({ onComplete: then });
+    tl.add(() => setPose('skid', 0.15));
+    tl.to(m, {
+      x,
+      duration: 0.45,
+      ease: 'power2.out',
+      onUpdate: () => {
+        st.x = m.x;
+        st.y = yAt(b, m.x);
+      },
+    });
+    tl.to(st, { sx: 1.06, sy: 0.94, duration: 0.15 }, '<');
+    tl.to(st, { sx: 1, sy: 1, duration: 0.4 }, '>');
+    tl.add(() => setPose('stand', 0.35), '<');
+  }
+
+  /** Кувырок вперёд по блоку (после быстрого приземления). */
+  function roll(b: Surf, then: () => void) {
+    const k = st.k;
+    const x = clampX(b, st.x + st.face * rnd(26, 46) * k);
+    const m = { x: st.x };
+    tl?.kill();
+    tl = gsap.timeline({
+      onComplete: () => {
+        st.rot = 0;
+        then();
+      },
+    });
+    tl.add(() => setPose('jump', 0.1));
+    tl.to(m, {
+      x,
+      duration: 0.7,
+      ease: 'power1.out',
+      onUpdate: () => {
+        st.x = m.x;
+        st.y = yAt(b, m.x);
+      },
+    });
+    tl.to(st, { rot: st.face * 360, sy: 0.85, duration: 0.7, ease: 'power1.inOut' }, '<');
+    tl.add(() => setPose('crouch', 0.1), '>-0.12');
+    tl.to(st, { sy: 1, duration: 0.3, ease: 'elastic.out(1, 0.45)' }, '>');
+  }
+
+  /** Перебраться на блок b: добежать, сорваться с края, прыгнуть с разбега или с места. */
+  function moveTo(b: Surf) {
+    const k = st.k;
+    // место на блоке: ближе к той стороне, откуда пришёл, с разбросом
+    const near = st.x < b.xc ? 0.25 : 0.75;
+    const x = b.x0 + (b.x1 - b.x0) * Math.min(1, Math.max(0, near + rnd(-0.3, 0.3)));
+    const y = yAt(b, x);
+    const dy = y - st.y;
+    const dist = Math.hypot(x - st.x, dy);
+    gsap.to(st, { propsK: 0, duration: 0.2 });
+    // по инерции после приземления: пробежать дальше, кувыркнуться или просто встать
+    const momentum = (fast: boolean) => () => {
+      const r = Math.random();
+      if (fast && r < 0.1 && b.x1 - b.x0 > 30 * k) roll(b, () => landed(b));
+      else if (r < 0.35 && b.x1 - b.x0 > 20 * k) {
+        // ещё пара шагов по инерции
+        const nx = clampX(b, st.x + st.face * rnd(14, 40) * k);
+        runTo(nx, yAt(b, nx), () => landed(b), { gait: 'walk', speed: rnd(70, 95), ease: 'power2.out' });
+      } else landed(b);
+    };
+    // та же высота, блоки рядом — добегает (иногда с подскоком через щель)
+    if (here && Math.abs(dy) < 12 && Math.max(b.ex0 - here.ex1, here.ex0 - b.ex1) < 20 * k) {
+      const r = Math.random();
+      const done = () => (r > 0.85 ? skid(b, () => landed(b)) : landed(b));
+      runTo(x, y, done, r < 0.8 ? { gait: 'walk' } : { speed: rnd(170, 240) });
+      return;
+    }
+    const dir = x > st.x ? 1 : -1;
+    const jump = (o: Partial<Spot>) =>
+      leap({
+        x,
+        y,
+        k,
+        face: dir,
+        name: 'stand',
+        props: false,
+        quick: true,
+        slow: 0.75,
+        onLand: momentum(dist > 220),
+        ...o,
+      });
+    // ниже и в стороне от блока — добегает до края и срывается вниз
+    const off = here && (dir > 0 ? x > here.ex1 : x < here.ex0);
+    if (here && off && dy > 40 * k && Math.random() < 0.5) {
+      const ex = clampX(here, dir > 0 ? here.ex1 : here.ex0);
+      runTo(ex, yAt(here, ex), () => jump({ takeoff: 'run', air: 'fall', lift: rnd(10, 26) * k, dur: 0.5 + Math.min(0.4, dy / 900) }), {
+        gait: 'walk',
+        speed: rnd(75, 100),
+        ease: 'sine.inOut',
+      });
+      return;
+    }
+    const flip = Math.random() < (dist > 300 ? 0.15 : 0.04) ? dir : 0;
+    const lift = 30 * k + Math.min(150, dist * 0.22) + Math.max(0, -dy * 0.25) + rnd(0, 20) * k;
+    // с разбега: пара шагов к цели и прыжок без замаха
+    if (here?.el && Math.random() < 0.35) {
+      const ax = clampX(here, st.x + dir * rnd(30, 80) * k);
+      if (Math.abs(ax - st.x) > 10) {
+        runTo(ax, yAt(here, ax), () => jump({ takeoff: 'run', flip, lift }), { speed: rnd(180, 240), ease: 'power1.in' });
+        return;
+      }
+    }
+    jump({ windup: true, flip, lift });
+  }
+
+  /** Возня на своём блоке. */
+  function play(b: Surf) {
+    const r = Math.random();
+    const room = b.x1 - b.x0;
+    const wide = room > 40;
+    if (wide && r < 0.55) {
+      // прогулочным шагом в другое место блока (подальше, чтобы прогулка была заметной)
+      const far = Math.abs(st.x - b.x0) > Math.abs(b.x1 - st.x) ? b.x0 : b.x1;
+      const x = Math.random() < 0.6 ? far + (st.x - far) * rnd(0, 0.3) : rnd(b.x0, b.x1);
+      runTo(x, yAt(b, x), flow, { gait: 'walk' });
+    } else if (wide && r < 0.6) {
+      // пробежка в дальний конец и торможение
+      const x = Math.abs(st.x - b.x0) > Math.abs(b.x1 - st.x) ? b.x0 : b.x1;
+      runTo(x, yAt(b, x), () => skid(b, flow), { speed: rnd(200, 260), ease: 'power1.inOut' });
+    } else if (wide && r < 0.64) skipHops(b, 2 + Math.floor(rnd(0, 2)));
+    else if (r < 0.66) flipHere(Math.random() < 0.5 ? st.face : (-st.face as 1 | -1));
+    else if (wide && r < 0.8) sit(b);
+    else if (r < 0.88) {
+      setPose('wave', 0.4);
+      after(1.4, 2.2, flow);
+    } else {
+      // неторопливо оглядывается
+      st.face = -st.face as 1 | -1;
+      after(0.9, 1.6, () => {
+        if (Math.random() < 0.6) st.face = -st.face as 1 | -1;
+        after(0.6, 1.2, flow);
+      });
+    }
+  }
+
+  /** Скачет вприпрыжку по блоку: несколько коротких подскоков подряд. */
+  function skipHops(b: Surf, n: number) {
+    const k = st.k;
+    let d = st.face as number;
+    if ((d > 0 ? b.x1 - st.x : st.x - b.x0) < 50 * k) d = -d;
+    st.face = d as 1 | -1;
+    tl?.kill();
+    tl = gsap.timeline({ onComplete: flow });
+    let x0 = st.x;
+    for (let i = 0; i < n; i++) {
+      const x1 = clampX(b, x0 + d * rnd(18, 30) * k);
+      const h = rnd(10, 18) * k;
+      const from = x0;
+      const m = { q: 0 };
+      tl.add(() => setPose('jump', 0.14));
+      tl.to(m, {
+        q: 1,
+        duration: rnd(0.42, 0.5),
+        ease: 'none',
+        onUpdate: () => {
+          st.x = from + (x1 - from) * m.q;
+          st.y = yAt(b, st.x);
+          st.hop = -4 * h * m.q * (1 - m.q);
+        },
+      });
+      tl.add(() => setPose('crouch', 0.08));
+      tl.to(st, { sx: 1.1, sy: 0.88, duration: 0.09 });
+      tl.to(st, { sx: 1, sy: 1, duration: 0.14 });
+      x0 = x1;
+    }
+    tl.add(() => setPose('stand', 0.35));
+  }
+
+  /** Сальто на месте (вперёд или назад). */
+  function flipHere(d: 1 | -1) {
+    const k = st.k;
+    tl?.kill();
+    tl = gsap.timeline({
+      onComplete: () => {
+        st.rot = 0;
+        flow();
+      },
+    });
+    tl.add(() => setPose('crouch', 0.12));
+    tl.to(st, { sx: 1.14, sy: 0.82, duration: 0.14, ease: 'power2.out' });
+    tl.add(() => setPose('jump', 0.12));
+    tl.to(st, { hop: -rnd(48, 70) * k, sx: 0.92, sy: 1.1, duration: 0.3, ease: 'power2.out' });
+    tl.to(st, { rot: d * 360, duration: 0.55, ease: 'power1.inOut' }, '<');
+    tl.to(st, { hop: 0, sx: 1, sy: 1, duration: 0.25, ease: 'power2.in' }, '<0.3');
+    tl.add(() => setPose('crouch', 0.08));
+    tl.to(st, { sx: 1.2, sy: 0.8, duration: 0.07 });
+    tl.add(() => setPose('stand', 0.25));
+    tl.to(st, { sx: 1, sy: 1, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
+    tl.timeScale(0.75);
+  }
+
+  /** Добегает до края блока и садится, свесив ноги. */
+  function sit(b: Surf) {
+    const k = st.k;
+    const right = Math.random() < 0.5;
+    const x = right ? b.ex1 - 3 * k : b.ex0 + 3 * k;
+    runTo(x, yAt(b, x), () => {
+      st.face = right ? 1 : -1;
+      setPose('sit', 0.5);
+      after(3, 5.5, () => {
+        // встаёт и отходит от края
+        const bx = clampX(b, x - st.face * rnd(10, 40) * k);
+        setPose('stand', 0.4);
+        after(0.4, 0.7, () => runTo(bx, yAt(b, bx), flow, { gait: 'walk' }));
+      });
+    }, { gait: 'walk' });
+  }
+
+  /* ---------------- Отрисовка ---------------- */
+
+  const setPts = (el: SVGElement, p: Pt[]) => el.setAttribute('points', pts(p));
+  let frame = 0;
+
+  function drawFig(fig: Figure) {
+    setPts(parts.legB, fig.legB);
+    setPts(parts.armB, fig.armB);
+    setPts(parts.torso, fig.torso);
+    setPts(parts.legF, fig.legF);
+    setPts(parts.armF, fig.armF);
+    parts.head.setAttribute('transform', `translate(${fig.head[0].toFixed(1)} ${fig.head[1].toFixed(1)})`);
+  }
+
+  let lastSY = 0;
+  function render(time: number) {
+    if (!enabled || target < 0) return;
+    if (!jumping && !running && target > 0) glue();
+    // вне экрана — не рисуем (кроме полёта: он может влетать в кадр)
+    const vis = st.y > scrollY - 200 && st.y < scrollY + innerHeight + 250;
+    // во время скролла рисуем каждый кадр: блок под ним может ехать (sticky)
+    // scrollY сменился в этом кадре (Lenis крутит раньше нас, а событие scroll
+    // придёт позже) — рисуем обязательно, иначе sticky-блок уедет от стикмена на кадр
+    const scrolled = scrollY !== lastSY;
+    lastSY = scrollY;
+    const moving =
+      scrolled ||
+      jumping ||
+      running ||
+      !!tl?.isActive() ||
+      performance.now() - lastScroll < 250 ||
+      (pen.on && (pen.sp > 0.01 || !!pen.jump || !!flipTl?.isActive()));
+    if (!vis && !moving) return;
+    // в покое хватает 30 кадров/с
+    if (!moving && ++frame % 2) return;
+
+    const still = de.classList.contains('is-still');
+    // бег и шаг — от пройденного пути (ноги и руки не скользят)
+    const t = st.to === 'run' || st.to === 'walk' ? st.phase : still ? 0.15 : time;
+    const s = stations[target];
+    // ведёт линию огромным карандашом: руки держат карандаш, грифель — на кончике линии
+    const penMode = !jumping && !running && !!s.line && pen.on;
+    let penProps: ReturnType<typeof propsFor> = [];
+    let p: Pose;
+    if (penMode) {
+      const pp = penPose(s.line!, still ? 0 : time);
+      p = mix(fromPose, pp.pose, st.mixK);
+      penProps = pp.props;
+    } else p = mix(fromPose, pose(st.to, t), st.mixK);
+    lastPose = p;
+    const fig = figure(p);
+
+    runner.style.transform = `translate3d(${st.x.toFixed(1)}px, ${(st.y + st.hop).toFixed(1)}px, 0) scale(${(st.sx * st.k).toFixed(3)}, ${(st.sy * st.k).toFixed(3)})`;
+    spin.style.rotate = `${st.rot.toFixed(1)}deg`;
+    flip.setAttribute(
+      'transform',
+      `${st.tilt ? `rotate(${st.tilt.toFixed(1)})` : ''}${st.face < 0 ? ' scale(-1 1)' : ''}`.trim(),
+    );
+    drawFig(fig);
+
+    // реквизит станции (ноутбук, чемодан, мячики…)
+    const showProps = st.propsK > 0.01 && !(s.name === 'plane' && thrown);
+    const props = !showProps ? [] : penMode ? penProps : propsFor(s.name, fig, t);
+    propEls.forEach((el, n) => {
+      const pr = props[n];
+      el.setAttribute('d', pr?.d ?? '');
+      if (pr?.transform) el.setAttribute('transform', pr.transform);
+      else el.removeAttribute('transform');
+      el.classList.toggle('is-fill', !!pr?.fill);
+      el.classList.toggle('is-fx', !!pr?.fx);
+    });
+    propsG.style.opacity = st.propsK.toFixed(2);
+  }
+
+  /* ---------------- Прыжок ---------------- */
+
+  function place(i: number) {
+    const s = stations[i];
+    penOff();
+    tl?.kill();
+    clearRoam();
+    stopRun();
+    jumping = false;
+    target = i;
+    // на «синьке» (.invert) стикмен рисуется светлым мелом
+    runner.classList.toggle('is-invert', !!defs[i]?.closest('.invert'));
+    Object.assign(st, { x: s.x, y: s.y, sx: 1, sy: 1, rot: 0, tilt: 0, k: s.scale, face: s.face, propsK: 1, hop: 0 });
+    offX = 0;
+    poseTween?.kill();
+    fromPose = lastPose = pose(s.name);
+    st.to = s.name;
+    st.mixK = 1;
+    frame = 1;
+    scheduleIdle();
+  }
+
+  /** Стоит на блоке, а блок сдвинулся (sticky, появление, аккордеон) — едет вместе с ним. */
+  function glue() {
+    const p = live(target);
+    if (!p) return;
+    if (p.line) {
+      drawAlong(p.line);
+      return;
+    }
+    // точно, без сглаживания: иначе отстаёт от sticky-карточки при скролле
+    st.x = p.x + offX;
+    st.y = p.y;
+  }
+
+  /* ---------------- Карандаш: ведёт круг года в Story ----------------
+     Кончик линии задаёт Story (data-draw-k). Стикмен стоит снаружи круга
+     лицом по ходу и толкает огромный карандаш перед собой, грифелем на кончике,
+     быстро — бежит, медленно — шагает, стоит — дышит.
+     Скролл назад: подпрыгивает и прокручивает карандаш ластиком вниз,
+     трёт (руки ходят, летят крошки). */
+
+  const pen = {
+    on: false,
+    erase: false,
+    flip: 0, // 0 — грифелем к линии, 1 — ластиком
+    ux: 0, // от кончика к хвату (сглаженный)
+    uy: -1,
+    sp: 0, // скорость кончика 0…1 (сглаженная)
+    lx: 0, // прошлое место кончика
+    ly: 0,
+    crumb: 0,
+    scx: 0, // скролл, при котором поставлен в прошлый раз
+    scy: 0,
+    side: 1, // сглаженная сторона (face), чтобы разворот не был рывком
+    seq: '', // номер круга от Story: сменился — прыжок к новому началу
+    // прыжок к новому кругу: смещения тела (o) и кончика (t) от новой точки, гаснут к q = 1
+    jump: null as null | { ox: number; oy: number; tx: number; ty: number; q: number },
+  };
+  let flipTl: gsap.core.Timeline | null = null;
+  // хват относительно стоп (в единицах фигуры, лицом вперёд)
+  const GRIP: Pt = [17, -40];
+
+  /** Куда встать, чтобы держать карандаш с грифелем в (x, y). */
+  function penFeet(x: number, y: number, ux: number, uy: number, face: number, k: number): Pt {
+    const gx = x + ux * PENCIL_HALF * k;
+    const gy = y + uy * PENCIL_HALF * k;
+    return [gx - face * GRIP[0] * k, gy - GRIP[1] * k];
+  }
+
+  /** Внешняя нормаль, верх карандаша отстаёт от хода: стикмен толкает его перед собой
+   *  (путь против часовой стрелки на экране). */
+  function penDir(l: NonNullable<Station['line']>): Pt {
+    const sgn = l.erase ? 1 : -1;
+    const ux = -l.ty + l.tx * 0.35 * sgn;
+    const uy = l.tx + l.ty * 0.35 * sgn;
+    const n = Math.hypot(ux, uy) || 1;
+    return [ux / n, uy / n];
+  }
+
+  function drawAlong(l: NonNullable<Station['line']>) {
+    const k = st.k;
+    const [ux, uy] = penDir(l);
+    if (!pen.on) {
+      Object.assign(pen, {
+        on: true,
+        erase: l.erase,
+        flip: l.erase ? 1 : 0,
+        ux,
+        uy,
+        sp: 0,
+        lx: l.x - scrollX,
+        ly: l.y - scrollY,
+        side: st.face,
+        seq: l.seq,
+        jump: null,
+      });
+      // встал к линии — Story может начинать рисовать
+      defs[target].dataset.pen = 'on';
+    }
+    // сменилось направление — подскок и переворот карандаша
+    if (l.erase !== pen.erase) {
+      pen.erase = l.erase;
+      flipTl?.kill();
+      flipTl = gsap
+        .timeline()
+        .to(pen, { flip: l.erase ? 1 : 0, duration: 0.75, ease: 'back.inOut(1.5)' }, 0)
+        .to(st, { hop: -18 * k, duration: 0.3, ease: 'power2.out' }, 0.05)
+        .to(st, { hop: 0, duration: 0.45, ease: 'bounce.out' }, 0.35);
+    }
+    // новый круг (смена главы): кончик перескочил — прыжок по дуге к нему,
+    // вместе с карандашом (Story на это время держит линию)
+    // Всё — смещениями от живой точки: круг закреплён (sticky) и едет по странице
+    // вместе со скроллом, абсолютные координаты страницы тут устаревают за кадр.
+    const sx = l.x - scrollX;
+    const sy = l.y - scrollY;
+    if (l.seq !== pen.seq) {
+      pen.seq = l.seq;
+      const [fx0, fy0] = penFeet(l.x, l.y, pen.ux, pen.uy, pen.side, k);
+      // где он был на экране в прошлом кадре — туда же сейчас (круг на экране не двигается)
+      const px = st.x - pen.scx + scrollX;
+      const py = st.y - pen.scy + scrollY;
+      const j = { ox: px - fx0, oy: py - fy0, tx: pen.lx - sx, ty: pen.ly - sy, q: 0 };
+      pen.jump = j;
+      gsap.to(j, {
+        q: 1,
+        duration: 0.42,
+        ease: 'power1.inOut',
+        onComplete: () => {
+          if (pen.jump === j) pen.jump = null;
+        },
+      });
+    }
+
+    pen.ux += (ux - pen.ux) * 0.12;
+    pen.uy += (uy - pen.uy) * 0.12;
+    const un = Math.hypot(pen.ux, pen.uy) || 1;
+    pen.ux /= un;
+    pen.uy /= un;
+
+    // скорость кончика (≤ 1: круг за MAX_LAP в Story ≈ 16 px/кадр)
+    const v = pen.jump ? 0 : Math.hypot(sx - pen.lx, sy - pen.ly);
+    pen.lx = sx;
+    pen.ly = sy;
+    pen.sp += (Math.min(1, v / (14 * k)) - pen.sp) * 0.12;
+
+    // лицом по ходу линии; стоит — не вертится. Разворот плавный (pen.side),
+    // иначе тело перескакивает на другую сторону карандаша за кадр
+    if (v > 0.4) {
+      const mx = l.tx * (l.erase ? -1 : 1);
+      if (Math.abs(mx) > 0.3) st.face = mx > 0 ? 1 : -1;
+    }
+    pen.side += (st.face - pen.side) * 0.15;
+
+    let [fx, fy] = penFeet(l.x, l.y, pen.ux, pen.uy, pen.side, k);
+    const j = pen.jump;
+    if (j) {
+      const q = j.q;
+      fx += j.ox * (1 - q);
+      fy += j.oy * (1 - q) - Math.sin(q * Math.PI) * 34 * k;
+    }
+    const d = Math.hypot(fx - st.x, fy - st.y);
+    st.x = fx;
+    st.y = fy;
+    pen.scx = scrollX;
+    pen.scy = scrollY;
+    st.tilt = 0;
+    // шаг — от пути тела, ноги не скользят
+    if (!j) st.phase += d / (5 * k);
+
+    // крошки ластика
+    const now = performance.now();
+    if (pen.erase && pen.flip > 0.9 && pen.sp > 0.3 && now - pen.crumb > 260) {
+      pen.crumb = now;
+      dust(l.x, l.y, 0.45 * k);
+    }
+  }
+
+  /** Спешка: чёрточки скорости позади и капли пота с головы (координаты фигуры). */
+  function hurryFx(head: Pt, time: number, h: number) {
+    const f = (n: number) => n.toFixed(1);
+    let lines = '';
+    [-50, -36, -22].forEach((y, i) => {
+      const len = (8 + 7 * Math.abs(Math.sin(time * 17 + i * 2.1))) * h;
+      const x = -12 - i * 3;
+      lines += `M${f(x)},${f(y)} h${f(-len)}`;
+    });
+    let drops = '';
+    for (let i = 0; i < 2; i++) {
+      const q = (time * 2.2 + i * 0.5) % 1; // капля летит назад-вверх и падает
+      const x = head[0] - 7 - 12 * q;
+      const y = head[1] - 6 - 9 * q + 16 * q * q;
+      drops += `M${f(x)},${f(y - 2.6)} q2,3 0,4.2 q-2,-1.2 0,-4.2z`;
+    }
+    return [
+      { d: lines, fx: true },
+      { d: drops, fx: true },
+    ];
+  }
+
+  /** Поза с карандашом: ноги — от скорости, руки (IK) держат карандаш, грифель на кончике. */
+  function penPose(l: NonNullable<Station['line']>, time: number) {
+    const k = st.k;
+    // медленно — шагает, догоняет — бежит; у потолка скорости — спешит изо всех сил
+    const run = Math.min(1, pen.sp * 1.8);
+    const hurry = Math.max(0, Math.min(1, (pen.sp - 0.6) / 0.3));
+    const base = mix(pose('stand', time), pose('run', st.phase), run);
+    // дыхание в покое, наклон вперёд в беге, назад — когда трёт
+    base.lean += 10 * hurry + (pen.erase ? -4 * run * (1 - hurry) : 0);
+    base.hipY += Math.sin(time * 2.4) * 0.6 * (1 - run);
+    // стирает — руки ходят туда-сюда, рисует — мелкая дрожь грифеля
+    const scrub = pen.erase ? Math.sin(time * 26) * 2.6 * pen.sp : Math.sin(time * 41) * 0.5 * pen.sp;
+    const g: Pt = [GRIP[0] + scrub, GRIP[1] + Math.sin(time * 2.4) * 0.6 * (1 - run)];
+    // к кончику линии из хвата (в координатах фигуры)
+    const wx = st.x + st.face * g[0] * k;
+    const wy = st.y + st.hop + g[1] * k;
+    // в прыжке к новому кругу кончик карандаша летит вместе с ним
+    let lx = l.x;
+    let ly = l.y;
+    const j = pen.jump;
+    if (j) {
+      lx += j.tx * (1 - j.q);
+      ly += j.ty * (1 - j.q) - Math.sin(j.q * Math.PI) * 34 * k;
+    }
+    const tx = (lx - wx) * st.face;
+    const ty = ly - wy;
+    const n = Math.hypot(tx, ty) || 1;
+    const ax = tx / n;
+    const ay = ty / n;
+    // кончик точно на линии: середина карандаша — в PENCIL_HALF от кончика,
+    // кисти скользят по карандашу (хват не обязательно в середине)
+    const tip: Pt = [g[0] + tx / k, g[1] + ty / k];
+    const mid: Pt = [tip[0] - ax * PENCIL_HALF, tip[1] - ay * PENCIL_HALF];
+    // переворот: карандаш крутится вокруг середины «через верх»
+    const phi = pen.flip * Math.PI * (st.face > 0 ? -1 : 1);
+    const c = Math.cos(phi);
+    const sn = Math.sin(phi);
+    const a: Pt = [ax * c - ay * sn, ax * sn + ay * c];
+    // кисти — на оси карандаша, ближе к хвату
+    const along = (g[0] - mid[0]) * a[0] + (g[1] - mid[1]) * a[1];
+    const q = Math.max(-PENCIL_HALF + 12, Math.min(PENCIL_HALF - 12, along));
+    const hf: Pt = [mid[0] + a[0] * (q - 6), mid[1] + a[1] * (q - 6)];
+    const hb: Pt = [mid[0] + a[0] * (q + 5), mid[1] + a[1] * (q + 5)];
+    const props = pencilProps(mid, a);
+    if (hurry > 0.05) props.push(...hurryFx(figure(base).head, time, hurry));
+    return { pose: reachArms(base, hf, hb), props };
+  }
+
+  /* ---------------- Бег и «патруль» ---------------- */
+
+  function stopRun() {
+    running = false;
+    idleCall?.kill();
+    idleCall = null;
+    st.hop = 0;
+  }
+
+  interface RunOpts {
+    gait?: 'run' | 'walk';
+    /** скорость в px/с при масштабе 1 */
+    speed?: number;
+    ease?: string;
+  }
+
+  /** Бежит (или идёт) по прямой в (x, y): фаза шага привязана к пути, ноги не скользят. */
+  function runTo(x: number, y: number, onDone?: () => void, o: RunOpts = {}) {
+    const walk = o.gait === 'walk';
+    tl?.kill();
+    const dx = x - st.x;
+    if (Math.abs(dx) < 3) {
+      onDone?.();
+      return;
+    }
+    running = true;
+    st.face = dx > 0 ? 1 : -1;
+    setPose(walk ? 'walk' : 'run', 0.25);
+    gsap.to(st, { propsK: 0, tilt: 0, duration: 0.15 });
+    const speed = o.speed ?? (walk ? rnd(55, 80) : 320);
+    // путь на радиан фазы ≈ реальная длина шага позы, иначе ноги мельтешат
+    const stride = walk ? 7 : 8.5;
+    // путь считаем от живой точки: блок может ехать под ногами (sticky, появление)
+    const i = target;
+    const base = stations[i] ?? { x: 0, y: 0 };
+    const fx = st.x - base.x;
+    const fy = st.y - base.y;
+    const tx = x - base.x;
+    const ty = y - base.y;
+    const p = { q: 0 };
+    let p0 = 0;
+    tl = gsap.timeline({
+      onComplete: () => {
+        running = false;
+        onDone?.();
+      },
+    });
+    tl.to(p, {
+      q: 1,
+      duration: Math.max(walk ? 0.6 : 0.35, Math.abs(dx) / (speed * st.k)),
+      ease: o.ease ?? (walk ? 'sine.inOut' : 'power1.inOut'),
+      onUpdate: () => {
+        const s = live(i) ?? base;
+        const nx = s.x + fx + (tx - fx) * p.q;
+        // фаза шага — только от собственного бега, не от езды блока
+        st.phase += (Math.abs(dx) * Math.abs(p.q - p0)) / (stride * st.k);
+        p0 = p.q;
+        st.x = nx;
+        st.y = s.y + fy + (ty - fy) * p.q;
+      },
+    });
+  }
+
+  /** Прибыл на точку: поза, реквизит, а дальше — чем-нибудь занят. */
+  function arrive(i: number) {
+    const s = stations[i];
+    if (!s || i !== target) return;
+    offX = 0; // до точного места доведёт glue()
+    st.face = s.face;
+    setPose(s.name, 0.35);
+    gsap.to(st, { propsK: 1, duration: 0.3 });
+    if (s.name === 'plane') gsap.delayedCall(0.35, throwPlane);
+    scheduleIdle();
+  }
+
+  function scheduleIdle(min = 2.2, max = 4.5) {
+    idleCall?.kill();
+    idleCall = gsap.delayedCall(gsap.utils.random(min, max), idle);
+  }
+
+  /** Постоянная «жизнь» на блоке: пробежка, подскок, помахать, оглянуться. */
+  function idle() {
+    if (target === 0) {
+      roam();
+      return;
+    }
+    const s = stations[target];
+    const vis = st.y > scrollY && st.y < scrollY + innerHeight;
+    const busy =
+      jumping || running || target <= 0 || !!s?.line || de.classList.contains('is-still');
+    if (!s || busy || !vis) {
+      scheduleIdle();
+      return;
+    }
+    const r = Math.random();
+    const wide = s.x1 - s.x0 > 140 && s.name !== 'plane';
+    if (wide && r < 0.45) patrol(s);
+    else if (r < 0.7) hop();
+    else if (r < 0.88 && s.name !== 'wave') wave();
+    else look();
+  }
+
+  /** Пробежка по своему блоку: в дальний конец, оглядеться и назад. */
+  function patrol(s: Station) {
+    const far = Math.abs(s.x - s.x0) > Math.abs(s.x1 - s.x) ? s.x0 : s.x1;
+    const tx = far + (s.x - far) * gsap.utils.random(0, 0.25);
+    const walk = Math.random() < 0.65;
+    runTo(tx, s.y, () => {
+      offX = st.x - (stations[target]?.x ?? st.x);
+      setPose('stand', 0.25);
+      idleCall = gsap.delayedCall(gsap.utils.random(0.5, 1.1), () => {
+        const home = stations[target];
+        if (!home) return;
+        runTo(home.x, home.y, () => arrive(target), walk ? { gait: 'walk' } : { speed: rnd(220, 280) });
+      });
+    }, walk ? { gait: 'walk' } : { speed: rnd(220, 300) });
+  }
+
+  /** Подпрыгнуть на месте: присел — вверх — приземлился с пружинкой. */
+  function hop() {
+    const name = stations[target].name;
+    const h = (24 + Math.random() * 18) * st.k;
+    tl?.kill();
+    tl = gsap.timeline({ onComplete: () => scheduleIdle() });
+    tl.add(() => setPose('crouch', 0.12));
+    tl.to(st, { sx: 1.12, sy: 0.84, propsK: 0, duration: 0.13, ease: 'power2.out' });
+    tl.add(() => setPose('jump', 0.15));
+    tl.to(st, { hop: -h, sx: 0.92, sy: 1.1, duration: 0.24, ease: 'power2.out' });
+    tl.to(st, { hop: 0, sx: 1, sy: 1, duration: 0.2, ease: 'power2.in' });
+    tl.add(() => setPose(name, 0.3));
+    tl.to(st, { sx: 1.16, sy: 0.84, duration: 0.07 });
+    tl.to(st, { sx: 1, sy: 1, propsK: 1, duration: 0.5, ease: 'elastic.out(1, 0.4)' });
+  }
+
+  function wave() {
+    const name = stations[target].name;
+    setPose('wave', 0.3);
+    gsap.to(st, { propsK: 0, duration: 0.2 });
+    idleCall = gsap.delayedCall(gsap.utils.random(1.2, 2), () => {
+      setPose(name, 0.35);
+      gsap.to(st, { propsK: 1, duration: 0.3 });
+      scheduleIdle();
+    });
+  }
+
+  function look() {
+    const face = st.face;
+    st.face = -face as 1 | -1;
+    idleCall = gsap.delayedCall(gsap.utils.random(0.7, 1.2), () => {
+      st.face = face;
+      scheduleIdle();
+    });
+  }
+
+  interface Spot {
+    x: number;
+    y: number;
+    k: number;
+    face: 1 | -1;
+    name: AnyPose;
+    props: boolean;
+    /** индекс точки: конец дуги едет за ней, если блок сдвигается в полёте */
+    idx?: number;
+    onLand?: () => void;
+    /** высота дуги над верхней точкой (по умолчанию — от расстояния) */
+    lift?: number;
+    /** всегда замах перед прыжком */
+    windup?: boolean;
+    /** прыжок с разбега: без замаха */
+    takeoff?: 'run' | 'stand';
+    /** поза в полёте (по умолчанию группировка jump; fall — сорвался с края) */
+    air?: AnyPose;
+    /** сальто: 1/−1 — направление, 0 — без него (по умолчанию — на дальних) */
+    flip?: number;
+    /** длительность полёта */
+    dur?: number;
+    /** быстрое приземление: onLand сразу после касания, пружинка доигрывает сама */
+    quick?: boolean;
+    /** темп всего прыжка (timeScale): меньше 1 — медленнее, по-мультяшному */
+    slow?: number;
+  }
+
+  function penOff() {
+    if (!pen.on) return;
+    pen.on = false;
+    const el = defs[target];
+    if (el) delete el.dataset.pen;
+  }
+
+  function jumpTo(i: number) {
+    const s = stations[i];
+    const wasRunning = running;
+    penOff();
+    clearRoam();
+    stopRun();
+    target = i;
+    // на «синьке» (.invert) стикмен рисуется светлым мелом
+    runner.classList.toggle('is-invert', !!defs[i]?.closest('.invert'));
+    if (de.classList.contains('is-still')) {
+      place(i);
+      return;
+    }
+    // та же высота и недалеко — добегает, а не прыгает
+    if (!jumping && Math.abs(s.y - st.y) < 14 && Math.abs(s.x - st.x) < 900 && Math.abs(s.scale - st.k) < 0.2) {
+      runTo(s.x, s.y, () => arrive(i));
+      return;
+    }
+    if (wasRunning) setPose('stand', 0.1);
+    leap({
+      ...s,
+      k: s.scale,
+      props: true,
+      idx: i,
+      onLand: () => arrive(i),
+    });
+  }
+
+  /** Прыжок по дуге в точку s. */
+  function leap(s: Spot) {
+    if (de.classList.contains('is-still')) {
+      tl?.kill();
+      jumping = false;
+      Object.assign(st, { x: s.x, y: s.y, sx: 1, sy: 1, rot: 0, k: s.k, face: s.face, propsK: s.props ? 1 : 0 });
+      poseTween?.kill();
+      fromPose = lastPose = pose(s.name);
+      st.to = s.name;
+      st.mixK = 1;
+      s.onLand?.();
+      return;
+    }
+    const airborne = jumping;
+    tl?.kill();
+    jumping = true;
+    thrown = false;
+
+    // Если старая станция далеко за кадром, «влетаем» из-за края экрана
+    const top = scrollY;
+    const bottom = scrollY + innerHeight;
+    const x0 = st.x;
+    let y0 = st.y;
+    const down = s.y > y0;
+    if (down && y0 < top - 140) y0 = top - 140;
+    if (!down && y0 > bottom + 140) y0 = bottom + 140;
+    let x1 = s.x;
+    let y1 = s.y;
+    const dx = x1 - x0;
+    const dist = Math.hypot(dx, y1 - y0);
+    const lift = s.lift ?? 70 + Math.min(220, Math.abs(dx) * 0.3 + dist * 0.12);
+    const cx = (x0 + x1) / 2;
+    // вершина дуги не выше верхнего края экрана (голова в кадре):
+    // вершина квадратичной кривой = (y0 + 2·cy + y1) / 4
+    const apexMin = top + 100 * Math.max(st.k, s.k);
+    const cy = Math.min(Math.max(Math.min(y0, y1) - lift, 2 * apexMin - (y0 + y1) / 2), Math.min(y0, y1) - 30);
+    const dur = s.dur ?? 0.55 + Math.min(0.3, dist / 2500);
+    const somersault = s.flip !== undefined ? s.flip !== 0 : dist > 650;
+    if (Math.abs(dx) > 20) st.face = dx > 0 ? 1 : -1;
+
+    const fly = { p: 0 };
+    const arcPts: string[] = [];
+    const at = (q: number): Pt => {
+      const u = 1 - q;
+      return [u * u * x0 + 2 * u * q * cx + q * q * x1, u * u * y0 + 2 * u * q * cy + q * q * y1];
+    };
+
+    // пунктир траектории: svg ровно по габаритам дуги
+    const pad = 20;
+    const minX = Math.min(x0, x1, cx) - pad;
+    const minY = cy - pad;
+    arc.style.transform = `translate(${minX}px, ${minY}px)`;
+    arc.setAttribute('width', String(Math.max(x0, x1, cx) - minX + pad));
+    arc.setAttribute('height', String(Math.max(y0, y1) - minY + pad));
+    arcPath.setAttribute('d', '');
+    gsap.killTweensOf(arc);
+    gsap.set(arc, { opacity: 0.8 });
+
+    tl = gsap.timeline({
+      onComplete: () => {
+        if (s.quick) gsap.to(st, { sx: 1, sy: 1, duration: 0.5, ease: 'elastic.out(1, 0.35)' });
+        s.onLand?.();
+      },
+    });
+
+    // 1. замах (если ещё не в воздухе и не уезжает за верх экрана вместе с блоком)
+    if (!airborne && s.takeoff !== 'run' && (s.windup || st.y - top > innerHeight * 0.35)) {
+      tl.add(() => setPose('crouch', 0.18));
+      tl.to(st, { sx: 1.14, sy: 0.8, propsK: 0, tilt: 0, duration: 0.18, ease: 'power2.out' });
+    }
+    // 2. отрыв: вытягивание
+    tl.add(() => setPose(s.air ?? 'jump', 0.25));
+    if (s.takeoff === 'run') gsap.to(st, { propsK: 0, duration: 0.15 });
+    tl.to(st, { sx: 0.86, sy: 1.18, tilt: 0, duration: 0.14, ease: 'power2.out' });
+    tl.to(st, { sx: 1, sy: 1, duration: 0.35, ease: 'power1.out' });
+    // 3. полёт по дуге
+    tl.to(
+      fly,
+      {
+        p: 1,
+        duration: dur,
+        ease: 'none',
+        onUpdate: () => {
+          if (s.idx !== undefined && s.idx === target) {
+            const p = live(s.idx);
+            if (p) [x1, y1] = [p.x, p.y];
+          }
+          const [x, y] = at(fly.p);
+          st.x = x;
+          st.y = y;
+          arcPts.push(`${(x - minX).toFixed(1)} ${(y - minY).toFixed(1)}`);
+          arcPath.setAttribute('d', 'M' + arcPts.join('L'));
+        },
+      },
+      '<-0.14',
+    );
+    tl.to(st, { k: s.k, duration: dur, ease: 'sine.inOut' }, '<');
+    if (somersault) {
+      tl.to(st, { rot: (s.flip || st.face) * 360, duration: dur * 0.75, ease: 'power2.inOut' }, `<${dur * 0.1}`);
+      tl.set(st, { rot: 0 });
+    }
+    // готовим ноги к земле чуть раньше касания
+    tl.add(() => setPose('crouch', 0.14), '>-0.12');
+    // 4. приземление: приплющило → пружинка → поза станции
+    tl.add(() => {
+      st.face = s.face;
+      // коснулся — дальше стоит на блоке (glue), пружинка доигрывает на месте
+      jumping = false;
+      offX = 0;
+      dust(x1, y1, s.k);
+      gsap.to(arc, { opacity: 0, duration: 0.6, delay: 0.1 });
+    });
+    tl.to(st, { sx: 1.25, sy: 0.74, duration: 0.09, ease: 'power2.out' });
+    if (s.slow) tl.timeScale(s.slow);
+    if (s.quick) {
+      // дальше сразу следующее действие, пружинку доиграет onComplete
+      tl.add(() => setPose(s.name, 0.3));
+      return;
+    }
+    tl.add(() => setPose(s.name, 0.4));
+    tl.to(st, { sx: 1, sy: 1, duration: 0.7, ease: 'elastic.out(1, 0.35)' });
+    if (s.props) tl.to(st, { propsK: 1, duration: 0.3 }, '<0.1');
+  }
+
+  function dust(x: number, y: number, k: number) {
+    gsap.killTweensOf(puff);
+    gsap.fromTo(
+      puff,
+      { x, y, opacity: 0.9, scale: 0.4 * k },
+      { opacity: 0, scale: 1.15 * k, duration: 0.5, ease: 'power2.out' },
+    );
+  }
+
+  function throwPlane() {
+    const s = stations[target];
+    if (!s || s.name !== 'plane' || thrown || jumping) return;
+    const targetEl = document.querySelector<HTMLElement>('[data-plane-target]');
+    if (!targetEl) return;
+    thrown = true;
+    const fig = figure(lastPose);
+    const [hx, hy] = fig.armF[2];
+    const fx = st.x + hx * st.k * st.face;
+    const fy = st.y + hy * st.k;
+    const r = targetEl.getBoundingClientRect();
+    const tx = r.left + scrollX + Math.min(r.width * 0.35, 220);
+    const ty = r.top + scrollY - 6;
+    const cx = (fx + tx) / 2;
+    const cy = Math.min(fy, ty) - 200;
+    const fl = { p: 0 };
+    gsap.killTweensOf(plane);
+    gsap.set(plane, { opacity: 1 });
+    gsap.to(fl, {
+      p: 1,
+      duration: 1.6,
+      ease: 'power1.inOut',
+      onUpdate: () => {
+        const q = fl.p;
+        const u = 1 - q;
+        const px = u * u * fx + 2 * u * q * cx + q * q * tx;
+        const py = u * u * fy + 2 * u * q * cy + q * q * ty;
+        const ax = 2 * u * (cx - fx) + 2 * q * (tx - cx);
+        const ay = 2 * u * (cy - fy) + 2 * q * (ty - cy);
+        const rot = (Math.atan2(ay, ax) * 180) / Math.PI + Math.sin(q * 12) * 8;
+        plane.style.transform = `translate3d(${px}px, ${py}px, 0) rotate(${rot}deg) scaleY(${ax < 0 ? -1 : 1})`;
+      },
+      onComplete: () => {
+        targetEl.classList.add('is-hit');
+        setTimeout(() => targetEl.classList.remove('is-hit'), 1400);
+        gsap.to(plane, { opacity: 0, duration: 0.5, delay: 0.6 });
+      },
+    });
+  }
+
+  /* ---------------- Какая станция активна ---------------- */
+
+  /**
+   * Точка сейчас доступна: элемент в раскладке и не попадает под data-perch-skip
+   * (селектор; например, неактивные главы в закреплённой Story).
+   */
+  function shown(el: HTMLElement | SVGElement) {
+    if (!el.getClientRects().length) return false;
+    const skip = el.dataset.perchSkip;
+    return !(skip && el.matches(skip));
+  }
+
+  /**
+   * Куда встать: держится текущего блока, пока тот в «полосе» экрана
+   * (18…90% высоты), иначе — блок в полосе, ближайший к 62% высоты.
+   * Наверху страницы — Hero, в самом низу — последняя точка (футер).
+   */
+  function activeIndex() {
+    if (scrollY < innerHeight * 0.35) return 0;
+    if (scrollY + innerHeight >= de.scrollHeight - 4) return stations.length - 1;
+    const top = scrollY + innerHeight * 0.24;
+    const bottom = scrollY + innerHeight * 0.9;
+    const aim = scrollY + innerHeight * 0.62;
+    const cur = stations[target];
+    if (target > 0 && cur && cur.y > top && cur.y < bottom && shown(defs[target])) return target;
+    let best = -1;
+    let bd = Infinity;
+    stations.forEach((s, i) => {
+      if (i === 0 || s.y < top || s.y > bottom) return;
+      const d = Math.abs(s.y - aim);
+      if (d < bd && shown(defs[i])) {
+        bd = d;
+        best = i;
+      }
+    });
+    if (best >= 0) return best;
+    // в полосе никого — ближайший видимый блок (ненадолго окажется у края кадра)
+    stations.forEach((s, i) => {
+      const d = Math.abs(s.y - aim);
+      if (i > 0 && d < bd && shown(defs[i])) {
+        bd = d;
+        best = i;
+      }
+    });
+    return best >= 0 ? best : target;
+  }
+
+  let scrollQueued = false;
+  let lastScroll = 0;
+  function onScroll() {
+    lastScroll = performance.now();
+    if (scrollQueued || !enabled) return;
+    scrollQueued = true;
+    requestAnimationFrame(() => {
+      scrollQueued = false;
+      refresh();
+      const i = activeIndex();
+      if (i !== target) jumpTo(i);
+    });
+  }
+
+  /* ---------------- Замеры и включение ---------------- */
+
+  /**
+   * Точка стикмена по элементу [data-perch]:
+   * - data-perch-edge: top (по умолчанию) — стоит на верхнем крае, mid — на середине
+   *   высоты (подчёркивание), station — ровно на месте статичной фигуры;
+   * - data-perch-at: место вдоль ширины (0…1), data-perch-dy: сдвиг вниз,
+   *   data-perch-face: куда смотрит, data-perch-scale: размер.
+   * Блоки, которые ещё не «появились» ([data-reveal] без .is-in), сдвинуты
+   * вниз на 1.6rem — вычитаем, чтобы прыгать в итоговое место.
+   */
+  function perchOf(el: HTMLElement | SVGElement, narrow: boolean): Station {
+    const d = el.dataset;
+    if (d.perchEdge === 'path') return pathPerch(el as SVGSVGElement, narrow);
+    const r = el.getBoundingClientRect();
+    // «итоговое» место блока: без сдвига, который сейчас анимируется
+    // (появление, смена главы) — иначе после приземления его дёргает вслед за блоком
+    let [sx, sy] = shiftOf(el);
+    let w = r.width;
+    let h = r.height;
+    if (el instanceof HTMLElement && (w !== el.offsetWidth || h !== el.offsetHeight || sx || sy)) {
+      // центр рамки при transform-origin: center смещается ровно на translate,
+      // поворот только раздувает рамку вокруг центра
+      w = el.offsetWidth;
+      h = el.offsetHeight;
+      sx += (w - r.width) / 2;
+      sy += (h - r.height) / 2;
+    }
+    const rev = el.closest('[data-reveal]');
+    if (rev && rev !== el) {
+      const [rx, ry] = shiftOf(rev);
+      sx += rx;
+      sy += ry;
+    }
+    const left = r.left + scrollX - sx;
+    const top = r.top + scrollY - sy;
+    const face = (d.perchFace === 'left' ? -1 : 1) as 1 | -1;
+    const name = d.perch as PoseName;
+    if (d.perchEdge === 'station') {
+      const x = left + w / 2;
+      // реальный размер (на мобильных CSS может его переопределить)
+      return { name, x, y: top + (h * 88) / 92, h, scale: w / 90, face, x0: x, x1: x };
+    }
+    const scale = Number(d.perchScale) || (narrow ? 0.72 : 0.95);
+    const y = (d.perchEdge === 'mid' ? top + h * 0.55 : top) + (Number(d.perchDy) || 0);
+    // на подчёркивании можно встать сразу за концом линии, на блоке — с отступом от края
+    const mid = d.perchEdge === 'mid';
+    const pad = 24 * scale;
+    let x0 = Math.max(left + (mid ? 0 : pad), 30);
+    let x1 = Math.min(left + w + (mid ? 16 * scale : -pad), de.clientWidth - 30);
+    // data-perch-span="0.35 0.7": по блоку можно бегать только в этой части ширины
+    const span = d.perchSpan?.split(' ').map(Number);
+    if (span?.length === 2) {
+      x0 = Math.max(x0, left + span[0] * w);
+      x1 = Math.min(x1, left + span[1] * w);
+    }
+    const x = Math.min(x1, Math.max(x0, left + Number(d.perchAt ?? 0.5) * w + (mid ? 16 * scale : 0)));
+    return { name, x, y, h: 92 * scale, scale, face, x0, x1 };
+  }
+
+  const pathLen = new WeakMap<SVGPathElement, number>();
+
+  /**
+   * data-perch-edge="path": ведёт кончик линии <path> внутри элемента.
+   * data-draw-k — сколько линии нарисовано (0…1), data-draw-dir — draw|erase.
+   * Сама точка — где встать, чтобы держать карандаш на кончике (для прыжка);
+   * дальше позу и место считает drawAlong().
+   */
+  function pathPerch(el: SVGSVGElement, narrow: boolean): Station {
+    const d = el.dataset;
+    const path = el.querySelector('path')!;
+    const m = el.getScreenCTM();
+    let total = pathLen.get(path);
+    if (total === undefined) pathLen.set(path, (total = path.getTotalLength()));
+    const scale = Number(d.perchScale) || (narrow ? 0.72 : 0.95);
+    const erase = d.drawDir === 'erase';
+    const at = (l: number): Pt => {
+      const q = path.getPointAtLength(Math.max(0, Math.min(total!, l)));
+      const s = m ? new DOMPoint(q.x, q.y).matrixTransform(m) : q;
+      return [s.x + scrollX, s.y + scrollY];
+    };
+    // видимая часть штриха: dasharray 1 2 со смещением 1.01·(1−k)
+    const l = Math.max(0, Math.min(1, 1.01 * (Number(d.drawK) || 0) - 0.01)) * total;
+    const e = total * 0.02;
+    const [x, y] = at(l);
+    const a = at(Math.max(0, l - e));
+    const b = at(Math.min(total, l + e));
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const line = { x, y, tx: (b[0] - a[0]) / len, ty: (b[1] - a[1]) / len, erase, seq: d.drawSeq ?? '' };
+    const face = st.face;
+    const [ux, uy] = pen.on ? [pen.ux, pen.uy] : penDir(line);
+    const [fx, fy] = penFeet(x, y, ux, uy, pen.on ? pen.side : face, scale);
+    return { name: erase ? 'erase' : 'draw', x: fx, y: fy, h: 92 * scale, scale, face, x0: fx, x1: fx, line };
+  }
+
+  /** translate из текущего transform элемента (в том числе посреди CSS-перехода). */
+  function shiftOf(el: Element): Pt {
+    const tr = getComputedStyle(el).transform;
+    if (!tr || tr === 'none') return [0, 0];
+    const m = new DOMMatrixReadOnly(tr);
+    return [m.m41, m.m42];
+  }
+
+  /** Живая точка i (и обновить её в списке). */
+  function live(i: number): Station | undefined {
+    const el = defs[i];
+    if (!el) return stations[i];
+    return (stations[i] = perchOf(el, innerWidth < 700));
+  }
+
+  let defs: (HTMLElement | SVGElement)[] = [];
+
+  /** Живые координаты всех точек (sticky-блоки двигаются со скроллом). */
+  function refresh() {
+    const narrow = innerWidth < 700;
+    stations = defs.map((el) => perchOf(el, narrow));
+  }
+
+  let first = true;
+  function measure() {
+    // порядок документа: первая точка — фигура Hero (на ней игрушка)
+    const els = Array.from(document.querySelectorAll<HTMLElement | SVGElement>('[data-perch]')).filter(
+      (el) => el.getClientRects().length > 0,
+    );
+    const on = !reducedMotion.matches && els.length > 0;
+    de.classList.toggle('has-runner', on);
+    if (!on) {
+      if (enabled) {
+        tl?.kill();
+        clearRoam();
+        gsap.ticker.remove(render);
+        window.removeEventListener('scroll', onScroll);
+      }
+      enabled = false;
+      return;
+    }
+
+    defs = els;
+    refresh();
+
+    if (!enabled) {
+      enabled = true;
+      gsap.ticker.add(render);
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+    // высота страницы поменялась — встаём на актуальное место без прыжка
+    // (гуляет по Hero — раскладка могла сдвинуться, начинает со станции)
+    const i = activeIndex();
+    if (mode === 'roam' && i === target) place(i);
+    else if (i === target && (jumping || running)) {
+      // летит или бежит — сам поправится, когда прибудет (arrive)
+    } else if (i === target && target > 0) {
+      // точка сдвинулась (блок «появился», шрифт догрузился) — доедет glue()
+    } else if (first) place(i);
+    // уже на странице — не телепортируется, а прыгает
+    else jumpTo(i);
+    first = false;
+    render(gsap.ticker.time);
+  }
+
+  let timer = 0;
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(measure, 180);
+  };
+
+  // Классы блоков меняются и без скролла (смена главы в Story срабатывает
+  // после нашей проверки в том же кадре) — изредка перепроверяем точку.
+  setInterval(() => {
+    if (!enabled || document.hidden) return;
+    refresh();
+    const i = activeIndex();
+    if (i !== target) jumpTo(i);
+  }, 400);
+
+  fontsReady().then(() => {
+    measure();
+    new ResizeObserver(schedule).observe(document.body);
+    // блок с точкой доехал после появления — пересчитать точное место
+    document.addEventListener('transitionend', (e) => {
+      if (e.propertyName === 'transform' && (e.target as Element).matches?.('[data-reveal]')) schedule();
+    });
+    reducedMotion.addEventListener('change', schedule);
+  });
+</script>

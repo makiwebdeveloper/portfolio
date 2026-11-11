@@ -1,13 +1,10 @@
 /**
- * Тема (day/night), палитра и «сцена» (0 светлая → 1 тёмная).
+ * Тема (day = бумага / night = доска).
  * Начальные значения ставит инлайн-скрипт в Base.astro ДО первой отрисовки;
- * здесь только переключение и уведомление подписчиков (WebGL-фон, курсор).
+ * здесь только переключение и уведомление подписчиков (курсор и т.п.).
  */
 
 export type Theme = 'day' | 'night';
-
-import { PALETTES, type Palette } from '../config/palettes';
-export { PALETTES, type Palette };
 
 const root = document.documentElement;
 
@@ -29,42 +26,9 @@ export function setTheme(theme: Theme) {
   emitColors();
 }
 
-export function getPalette(): Palette {
-  const p = root.dataset.palette as Palette | undefined;
-  return p && PALETTES.includes(p) ? p : PALETTES[0];
-}
-
-export function setPalette(palette: Palette) {
-  if (palette === PALETTES[0]) delete root.dataset.palette;
-  else root.dataset.palette = palette;
-  store('palette', palette);
-  emitColors();
-}
-
-/** Цвета сменились (тема или палитра) — пусть WebGL перечитает токены. */
+/** Цвета сменились (тема) — пусть canvas-слои перечитают токены. */
 function emitColors() {
   window.dispatchEvent(new CustomEvent('colorschange'));
-}
-
-/* ---------- Сцена ---------- */
-
-let scene = 0;
-const sceneListeners = new Set<(v: number) => void>();
-
-export function getScene() {
-  return scene;
-}
-
-/** Мгновенно выставляет значение сцены. Плавность даёт вызывающий (GSAP). */
-export function applyScene(value: number) {
-  scene = value;
-  root.style.setProperty('--scene', value.toFixed(4));
-  sceneListeners.forEach((fn) => fn(value));
-}
-
-export function onScene(fn: (v: number) => void) {
-  sceneListeners.add(fn);
-  return () => sceneListeners.delete(fn);
 }
 
 /**

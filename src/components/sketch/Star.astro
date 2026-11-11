@@ -1,0 +1,48 @@
+---
+/**
+ * Звёздочка-мотив сайта (src/lib/doodles.ts).
+ * variant: fill — залитая; line — контур маркером (рисуется при появлении,
+ * если стоит data-draw); both — заливка цветом бумаги + контур.
+ * Цвет контура = currentColor, заливка = --star-fill (по умолчанию currentColor).
+ */
+import { STAR_FILL, STAR_LINE } from '../../lib/doodles';
+
+interface Props {
+  variant?: 'fill' | 'line' | 'both';
+  class?: string;
+  draw?: boolean;
+  style?: string;
+  /** data-атрибуты (например, data-roam для прогулки стикмена) */
+  [key: `data-${string}`]: string | undefined;
+}
+const { variant = 'fill', class: className, draw = false, style, ...rest } = Astro.props;
+---
+
+<svg
+  class:list={['star', `star--${variant}`, className]}
+  viewBox="0 0 100 100"
+  aria-hidden="true"
+  data-draw={draw ? '' : undefined}
+  style={style}
+  {...rest}
+>
+  {variant !== 'line' && <path class="star__fill" d={STAR_FILL} />}
+  {variant !== 'fill' && <path class="star__line" pathLength="1" d={STAR_LINE} />}
+</svg>
+
+<style>
+  .star {
+    overflow: visible;
+    flex: none;
+  }
+  .star__fill {
+    fill: var(--star-fill, currentColor);
+  }
+  .star__line {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--star-stroke, 2.6);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+</style>

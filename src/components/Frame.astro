@@ -1,0 +1,202 @@
+---
+/**
+ * Рамка тетради (только ≥ 900px, где есть поля):
+ * - в полях вертикально «от руки» подписана текущая секция ([data-frame-label]);
+ * - красная линия полей заполняется чернилами по мере скролла;
+ * - метки обреза «+» по краям и координаты на правом крае.
+ * Всё фиксированное, маленькое и двигается только transform/opacity.
+ */
+---
+
+<div class="frame" aria-hidden="true" data-frame>
+  <p class="frame__label">
+    <span class="frame__num" data-frame-num>01</span>
+    <span class="frame__text" data-frame-text></span>
+  </p>
+  <span class="frame__progress"><span data-frame-bar></span></span>
+
+  <span class="crop frame__crop" style="left: calc(var(--lane) - 2.6rem); top: 22%"></span>
+  <span class="crop frame__crop" style="left: calc(var(--lane) - 2.6rem); bottom: 22%"></span>
+  <span class="crop frame__crop" style="right: 1rem; top: 22%"></span>
+  <span class="crop frame__crop" style="right: 1rem; bottom: 22%"></span>
+
+  <p class="frame__edge micro">
+    <span>59.33° N — 18.07° E</span>
+    <span data-frame-count></span>
+  </p>
+</div>
+
+<style>
+  .frame {
+    display: none;
+  }
+
+  @media (min-width: 900px) {
+    .frame {
+      display: block;
+    }
+  }
+
+  .frame__label,
+  .frame__edge,
+  .frame__crop {
+    transition: color 0.4s;
+  }
+  .frame__label {
+    position: fixed;
+    left: calc(var(--lane) * 0.5 - 14px);
+    top: 50%;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    writing-mode: vertical-rl;
+    rotate: 180deg;
+    translate: -50% 50%;
+    font-family: var(--font-hand);
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--color-muted);
+    pointer-events: none;
+  }
+  .frame__num {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--color-accent);
+  }
+  /* Смена подписи: старая уезжает, новая «дописывается» снизу вверх */
+  .frame__text {
+    display: inline-block;
+    clip-path: inset(-20% -40% -20% -40%);
+    transition:
+      clip-path 0.6s var(--ease-in-out),
+      opacity 0.3s;
+  }
+  .frame.is-swapping .frame__text {
+    clip-path: inset(-20% -40% 100% -40%);
+    opacity: 0;
+    transition-duration: 0.25s;
+  }
+
+  /* Чернила заполняют линию полей сверху вниз */
+  .frame__progress {
+    position: fixed;
+    left: calc(var(--lane) - 14px);
+    top: 0;
+    bottom: 0;
+    width: 1.5px;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .frame__progress span {
+    position: absolute;
+    inset: 0;
+    background: var(--color-accent);
+    transform-origin: top;
+    transform: scaleY(var(--p, 0));
+    will-change: transform;
+  }
+
+  .frame__crop {
+    position: fixed;
+    z-index: 3;
+    opacity: 0.8;
+  }
+
+  .frame__edge {
+    position: fixed;
+    right: 0.85rem;
+    bottom: 1.6rem;
+    z-index: 3;
+    display: flex;
+    gap: 1.4rem;
+    writing-mode: vertical-rl;
+    font-size: 0.62rem;
+    pointer-events: none;
+  }
+  /* Над «синькой» подписи светлые */
+  .frame.is-invert .frame__label,
+  .frame.is-invert .frame__edge,
+  .frame.is-invert [data-frame-count] {
+    color: var(--p-blueprint-ink);
+  }
+  .frame.is-invert .frame__num {
+    color: var(--p-highlight);
+  }
+  .frame.is-invert .frame__crop {
+    color: var(--p-blueprint-ink);
+    opacity: 0.5;
+  }
+
+  [data-frame-count] {
+    color: var(--color-text);
+  }
+</style>
+
+<script>
+  import { reducedMotion } from '../lib/motion';
+
+  const frame = document.querySelector<HTMLElement>('[data-frame]')!;
+  const text = frame.querySelector<HTMLElement>('[data-frame-text]')!;
+  const num = frame.querySelector<HTMLElement>('[data-frame-num]')!;
+  const count = frame.querySelector<HTMLElement>('[data-frame-count]')!;
+  const bar = frame.querySelector<HTMLElement>('[data-frame-bar]')!;
+  const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-frame-label]'));
+  const total = String(sections.length).padStart(2, '0');
+
+  let current = -1;
+  let swapTimer = 0;
+  function show(i: number) {
+    if (i === current || i < 0) return;
+    const first = current === -1;
+    current = i;
+    const apply = () => {
+      text.textContent = sections[i].dataset.frameLabel ?? '';
+      num.textContent = String(i + 1).padStart(2, '0');
+      count.textContent = `(${num.textContent} / ${total})`;
+      frame.classList.remove('is-swapping');
+      frame.classList.toggle('is-invert', sections[i].classList.contains('invert'));
+    };
+    clearTimeout(swapTimer);
+    if (first || reducedMotion.matches) return apply();
+    frame.classList.add('is-swapping');
+    swapTimer = window.setTimeout(apply, 260);
+  }
+
+  // Текущая секция — последняя, чей верх выше середины экрана.
+  // Считаем на скролле (6 прямоугольников за кадр — дёшево): так подпись
+  // верна и после прыжка по якорю, и у футера (он остаётся за Contact).
+  const pick = () => {
+    if (innerWidth < 900) return; // рамка видна только при полях
+    const mid = innerHeight / 2;
+    let i = 0;
+    sections.forEach((s, n) => {
+      if (s.getBoundingClientRect().top <= mid) i = n;
+    });
+    show(i);
+  };
+
+  // Прогресс скролла: одна CSS-переменная раз в кадр
+  let ticking = false;
+  const update = () => {
+    ticking = false;
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.setProperty('--p', String(max > 0 ? Math.min(1, scrollY / max) : 0));
+    pick();
+  };
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    },
+    { passive: true },
+  );
+  window.addEventListener('resize', update);
+  update();
+</script>

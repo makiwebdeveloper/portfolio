@@ -1,6 +1,17 @@
 ---
+/**
+ * Story в двух частях.
+ * 1. Кинетическая перебивка: слова заголовка ждут за кадром и на скролле
+ *    влетают и собираются во фразу; сквозь нарисованную пружину падает звёздочка.
+ * 2. Плеер глав: слева годы со стрелкой, в центре год-одометр (контур →
+ *    штриховка) (стикмен обводит его карандашом), справа карточка главы и Prev/Next/Skip.
+ * Мобильные / reduced motion / без JS: обычный заголовок и список заметок.
+ */
 import { pick, useT, type Lang } from '../../i18n';
 import { chapters } from '../../data/timeline';
+import Underline from '../sketch/Underline.astro';
+import Star from '../sketch/Star.astro';
+import StickStation from '../sketch/StickStation.astro';
 
 interface Props {
   lang: Lang;
@@ -8,16 +19,76 @@ interface Props {
 const { lang } = Astro.props;
 const t = useT(lang);
 const firstYear = chapters[0].year.split('');
+const tilts = [-1.6, 1.2, -0.8, 1.6, -1.2, 0.9];
+const words = t('story.title').split(' ');
+const total = String(chapters.length).padStart(2, '0');
+
+// Пружина: витки эллипсов друг под другом, одна ломаная (рисуется dashoffset-ом)
+const coil = (() => {
+  const loops = 9;
+  const steps = loops * 28;
+  const pts: string[] = [];
+  for (let k = 0; k <= steps; k++) {
+    const a = (k / 28) * Math.PI * 2;
+    const x = 60 + 52 * Math.cos(a) + Math.sin(k * 0.7) * 0.8;
+    const y = 14 + (k / 28) * 44 + 12 * Math.sin(a);
+    pts.push(`${x.toFixed(1)} ${y.toFixed(1)}`);
+  }
+  return `M${pts.join('L')}`;
+})();
 ---
 
-<section class="story" id="story" tabindex="-1" aria-labelledby="story-title" data-story style={`--count: ${chapters.length}`}>
-  <div class="container story__head">
-    <p class="eyebrow" data-reveal>{t('story.eyebrow')}</p>
-    <h2 class="story__title" id="story-title" data-reveal style="--reveal-i: 1">{t('story.title')}</h2>
+<section class="story" id="story" tabindex="-1" aria-labelledby="story-title" data-frame-label={t('nav.story')} data-story style={`--count: ${chapters.length}`}>
+  <StickStation pose="suitcase" class="lane-station" />
+
+  <!-- 1. Кинетическая перебивка -->
+  <div class="story__kinetic" data-kinetic>
+    <div class="story__kinetic-stage container">
+      <svg class="story__coil" viewBox="0 0 120 430" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <path pathLength="1" d={coil} data-coil></path>
+      </svg>
+      <span class="story__faller" aria-hidden="true" data-faller><Star variant="both" /></span>
+
+      <div class="story__head">
+        <p class="eyebrow" data-reveal>{t('story.eyebrow')}</p>
+        <h2 class="story__title" id="story-title" data-reveal style="--reveal-i: 1">
+          <span class="title-u">
+            {
+              words.map((w, i) => (
+                <>
+                  <span class="kw" data-kw={i}>
+                    {w}
+                  </span>{' '}
+                </>
+              ))
+            }
+            <Underline variant="wave" perch="suitcase" />
+          </span>
+        </h2>
+        <p class="story__since tag" data-reveal style="--reveal-i: 2" data-kw-since>{t('story.since')}</p>
+      </div>
+    </div>
   </div>
 
+  <!-- 2. Плеер глав -->
   <div class="story__track" data-story-track>
     <div class="story__sticky container">
+      <ol class="story__rail" role="list" data-story-rail>
+        <svg class="story__arrow" viewBox="0 0 30 24" aria-hidden="true" data-story-arrow>
+          <path d="M3 12c7-.6 14-.2 22 .2M17 4.5c3 2.6 5.5 5 8.3 7.6-2.7 2.5-5.4 5-8.2 7.4"></path>
+        </svg>
+        {
+          chapters.map((c, i) => (
+            <li>
+              <button type="button" class="story__rail-btn" data-goto={i} aria-label={`${c.year} — ${pick(c.title, lang)}`}>
+                <span class="story__rail-year">{c.year}</span>
+                <span class="micro">{pick(c.place, lang).split(/[,·]/)[0]}</span>
+              </button>
+            </li>
+          ))
+        }
+      </ol>
+
       <!-- Большой «одометр» года: виден только в закреплённом режиме -->
       <div class="story__year" aria-hidden="true" data-story-year>
         {
@@ -31,27 +102,61 @@ const firstYear = chapters[0].year.split('');
             </span>
           ))
         }
+        <svg
+          class="story__year-circle"
+          viewBox="0 0 300 140"
+          preserveAspectRatio="none"
+          data-perch="draw"
+          data-perch-edge="path"
+          data-perch-scale="1.15"
+          data-story-circle
+        >
+          <path pathLength="1" d="M210 16C150 0 50 6 22 46c-26 38 30 78 130 80 96 2 146-28 136-66-8-30-70-48-150-42"></path>
+        </svg>
       </div>
 
-      <ol class="story__dots" aria-hidden="true">
-        {chapters.map((_, i) => <li data-story-dot={i} />)}
-      </ol>
+      <div class="story__stage">
+        <div class="story__controls" data-story-controls>
+          <p class="micro story__counter" aria-hidden="true"><span data-story-num>01</span> / {total}</p>
+          <button type="button" class="story__ctl sketch" data-story-prev>
+            <span aria-hidden="true">◂◂</span>
+            {t('story.prev').split(' ')[0]}
+          </button>
+          <button type="button" class="story__ctl sketch" data-story-next>
+            {t('story.next').split(' ')[0]}
+            <span aria-hidden="true">▸▸</span>
+          </button>
+          <button type="button" class="story__ctl sketch" data-story-skip>
+            {t('story.skip')}
+            <span aria-hidden="true">▸▸|</span>
+          </button>
+        </div>
 
-      <ol class="story__list" role="list">
-        {
-          chapters.map((c, i) => (
-            <li class="story__chapter" data-chapter={i} data-chapter-scene={c.scene} data-year={c.year}>
-              <p class="story__chapter-year">{c.year}</p>
-              <p class="story__place">
-                <span class="story__index">{String(i + 1).padStart(2, '0')}</span>
-                {pick(c.place, lang)}
-              </p>
-              <h3 class="story__chapter-title">{pick(c.title, lang)}</h3>
-              <p class="story__text">{pick(c.text, lang)}</p>
-            </li>
-          ))
-        }
-      </ol>
+        <ol class="story__list" role="list">
+          {
+            chapters.map((c, i) => (
+              <li
+                class="story__chapter paper taped"
+                data-chapter={i}
+                data-year={c.year}
+                data-perch={i % 2 ? 'point' : 'stand'}
+                data-perch-at={i % 2 ? 0.82 : 0.2}
+                data-perch-face={i % 2 ? 'left' : 'right'}
+                data-perch-skip=".is-pinned [data-chapter]"
+                style={`--tilt: ${tilts[i % tilts.length]}deg; --tape-tilt: ${-tilts[i % tilts.length] * 2}deg`}
+              >
+                <p class="story__chapter-year">{c.year}</p>
+                <p class="story__place">
+                  <span class="story__index">{String(i + 1).padStart(2, '0')}</span>
+                  {pick(c.place, lang)}
+                </p>
+                <h3 class="story__chapter-title">{pick(c.title, lang)}</h3>
+                <p class="story__text">{pick(c.text, lang)}</p>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
     </div>
   </div>
 </section>
@@ -61,63 +166,86 @@ const firstYear = chapters[0].year.split('');
     position: relative;
     padding-top: var(--section-space);
     outline: none;
+    --station-top: calc(var(--section-space) + 2.5rem);
   }
 
+  /* ---------- Заголовок / перебивка: обычный режим ---------- */
   .story__head {
+    position: relative;
+    z-index: 1;
     display: grid;
-    gap: 1.2rem;
+    gap: 1rem;
     margin-bottom: clamp(3rem, 8vw, 6rem);
   }
 
   .story__title {
     font-size: var(--step-4);
-    max-width: 14ch;
+    max-width: 16ch;
+  }
+  .kw {
+    display: inline-block;
+  }
+  .story__since {
+    justify-self: start;
+    font-size: 0.8rem;
   }
 
-  /* ---------- Обычный режим (мобильные, без JS, reduced motion) ---------- */
+  .story__coil,
+  .story__faller {
+    display: none;
+  }
+
+  /* ---------- Плеер: обычный режим (мобильные, без JS, reduced motion) ---------- */
   .story__year,
-  .story__dots {
+  .story__rail,
+  .story__controls {
     display: none;
   }
 
   .story__list {
     display: grid;
-    gap: clamp(4rem, 10vw, 8rem);
+    gap: clamp(3.5rem, 9vw, 6rem);
     padding-bottom: var(--section-space);
   }
 
   .story__chapter {
     display: grid;
-    gap: 0.8rem;
-    max-width: 640px;
-    padding-left: clamp(0rem, 8vw, 8rem);
+    gap: 0.6rem;
+    max-width: 37.5rem;
+    padding: clamp(1.4rem, 3vw, 2.2rem) clamp(1.3rem, 3vw, 2.4rem);
   }
   .story__chapter:nth-child(even) {
     margin-left: auto;
   }
 
   .story__chapter-year {
-    font-family: var(--font-display);
-    font-size: var(--step-4);
+    font-family: var(--font-hand);
+    font-size: var(--step-3);
+    font-weight: 700;
     line-height: 1;
-    font-style: italic;
     color: var(--color-accent);
   }
 
   .story__place {
     display: flex;
-    gap: 0.8em;
-    font-size: var(--step--1);
-    letter-spacing: 0.14em;
+    align-items: baseline;
+    gap: 0.7em;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-muted);
   }
   .story__index {
-    color: var(--color-text);
+    font-family: var(--font-hand);
+    font-size: 1.3rem;
+    letter-spacing: 0;
+    color: var(--color-accent);
   }
 
   .story__chapter-title {
-    font-size: var(--step-3);
+    font-size: var(--step-2);
   }
 
   .story__text {
@@ -125,9 +253,84 @@ const firstYear = chapters[0].year.split('');
     max-width: 52ch;
   }
 
-  /* ---------- Закреплённый режим (desktop + анимации включены) ---------- */
+  /* =====================================================================
+     Закреплённый режим (desktop + анимации включены)
+     ===================================================================== */
+
+  /* --- Перебивка: сцена приклеена, пока слова собираются --- */
+  .story.is-pinned .story__kinetic {
+    height: 210svh;
+    /* слова ждут за кадром: не вылезают на соседние секции и не дают горизонтальный скролл
+       (clip, а не hidden, чтобы sticky-сцена продолжала работать) */
+    overflow: clip;
+  }
+  .story.is-pinned .story__kinetic-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    display: grid;
+    place-items: center;
+  }
+  .story.is-pinned .story__head {
+    margin: 0;
+    justify-items: center;
+    text-align: center;
+  }
+  .story.is-pinned .story__title {
+    font-size: var(--step-5);
+    max-width: 12ch;
+    line-height: 0.95;
+  }
+  .story.is-pinned .story__since {
+    justify-self: center;
+    font-size: 0.95rem;
+  }
+  .story.is-pinned .kw {
+    will-change: transform;
+  }
+
+  .story.is-pinned .story__coil {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    height: 88svh;
+    width: auto;
+    translate: -50% -50%;
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-line);
+    stroke-width: 0.9;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+  .story__coil path {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: var(--coil, 1.01);
+  }
+
+  .story.is-pinned .story__faller {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 0;
+    z-index: 2;
+    width: clamp(3rem, 6vw, 5rem);
+    margin-left: calc(clamp(3rem, 6vw, 5rem) / -2);
+    color: var(--color-text);
+    --star-fill: var(--color-surface);
+    --star-stroke: 3.5;
+    will-change: transform;
+    pointer-events: none;
+  }
+  .story__faller :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+
+  /* --- Плеер --- */
   .story.is-pinned .story__track {
-    height: calc(var(--count) * 85svh + 100svh);
+    height: calc(var(--count) * 75svh + 100svh);
   }
 
   .story.is-pinned .story__sticky {
@@ -135,34 +338,118 @@ const firstYear = chapters[0].year.split('');
     top: 0;
     height: 100svh;
     display: grid;
-    grid-template-columns: 1.1fr 1fr;
+    grid-template-columns: auto minmax(0, 0.9fr) minmax(0, 1.1fr);
     align-items: center;
-    gap: var(--gutter);
+    gap: clamp(1.5rem, 3.5vw, 3.5rem);
   }
 
-  .story.is-pinned .story__year {
-    display: flex;
-    font-family: var(--font-display);
-    font-size: clamp(7rem, 17vw, 18rem);
+  /* Годы слева со стрелкой-указателем */
+  .story.is-pinned .story__rail {
+    position: relative;
+    display: grid;
+    gap: 0.35rem;
+    padding-left: 2.2rem;
+  }
+  .story__arrow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1.6rem;
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transform: translateY(var(--arrow-y, 0px));
+    transition: transform 0.6s var(--ease-back);
+  }
+  .story__rail-btn {
+    display: grid;
+    justify-items: start;
+    padding: 0.2rem 0.3rem;
+    text-align: left;
+    color: var(--color-muted);
+    transition:
+      color 0.3s,
+      translate 0.4s var(--ease-back);
+  }
+  .story__rail-btn:hover {
+    color: var(--color-text);
+    translate: 3px 0;
+  }
+  .story__rail-btn.is-active {
+    color: var(--color-text);
+  }
+  .story__rail-year {
+    font-family: var(--font-hand);
+    font-size: 1.7rem;
+    font-weight: 700;
     line-height: 1;
-    font-style: italic;
-    color: var(--color-accent);
-    letter-spacing: -0.04em;
+  }
+  .story__rail-btn .micro {
+    font-size: 0.6rem;
+    color: inherit;
   }
 
-  /* Высота ячейки с запасом под выносные элементы курсивных цифр */
+  /* Год: контур маркером, после остановки — штриховка */
+  .story.is-pinned .story__year {
+    position: relative;
+    display: flex;
+    justify-self: center;
+    width: fit-content;
+    font-family: var(--font-hand);
+    font-weight: 700;
+    font-size: clamp(6rem, 12.5vw, 13rem);
+    line-height: 1;
+    rotate: -4deg;
+  }
+  .odo__strip span {
+    color: transparent;
+    -webkit-text-stroke: 2px var(--color-accent);
+    background: repeating-linear-gradient(-50deg, var(--color-accent) 0 3px, transparent 3px 8px) 0 0 / 0% 100% no-repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    transition: background-size 0.9s var(--ease-in-out);
+  }
+  .story__year.is-filled .odo__strip span {
+    background-size: 100% 100%;
+  }
+
+  /* Обводка года — таймер главы: рисуется по мере скролла */
+  .story__year-circle {
+    position: absolute;
+    inset: -8% -10% -4%;
+    width: 120%;
+    height: 112%;
+    max-width: none;
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-text);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+  .story__year-circle path {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: var(--circle, 1.01);
+  }
+
+  /* Высота ячейки с запасом под выносные элементы рукописных цифр */
   .odo {
     --cell: 1.3em;
     display: inline-block;
     height: var(--cell);
-    overflow: hidden;
-    padding-inline: 0.04em;
+    /* режем только по вертикали: рукописные цифры шире своей ячейки */
+    overflow-x: visible;
+    overflow-y: clip;
+    padding-inline: 0.03em;
   }
   .odo__strip {
     display: flex;
     flex-direction: column;
+    align-items: center;
     transform: translateY(calc(var(--d) * -1 * var(--cell)));
-    transition: transform 1.1s var(--ease-out);
+    transition: transform 1.1s var(--ease-back);
   }
   .odo__strip span {
     height: var(--cell);
@@ -172,24 +459,47 @@ const firstYear = chapters[0].year.split('');
   .odo:nth-child(3) .odo__strip { transition-delay: 0.1s; }
   .odo:nth-child(4) .odo__strip { transition-delay: 0.15s; }
 
-  .story.is-pinned .story__dots {
-    position: absolute;
-    left: var(--gutter);
-    bottom: 3rem;
+  /* Сцена справа: кнопки над карточкой */
+  .story.is-pinned .story__stage {
+    display: grid;
+    gap: 1.6rem;
+  }
+  .story.is-pinned .story__controls {
     display: flex;
-    gap: 0.6rem;
-    list-style: none;
-    padding: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
   }
-  .story__dots li {
-    width: 28px;
-    height: 2px;
-    background: var(--color-line);
-    transition: background 0.4s, width 0.6s var(--ease-out);
+  .story__counter {
+    margin-right: auto;
+    color: var(--color-text);
   }
-  .story__dots li.is-active {
-    width: 56px;
-    background: var(--color-text);
+  .story__ctl {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    padding: 0.25rem 0.75rem 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition:
+      color 0.2s,
+      translate 0.3s var(--ease-back);
+  }
+  .story__ctl::before {
+    border-width: 1.5px;
+    border-radius: 4px 6px 3px 7px / 7px 3px 6px 4px;
+    animation-name: none;
+  }
+  .story__ctl:hover {
+    color: var(--color-accent);
+    translate: 0 -2px;
+  }
+  .story__ctl:disabled {
+    opacity: 0.35;
+    pointer-events: none;
   }
 
   .story.is-pinned .story__list {
@@ -199,26 +509,25 @@ const firstYear = chapters[0].year.split('');
 
   .story.is-pinned .story__chapter {
     grid-area: 1 / 1;
-    padding: 0;
     margin: 0;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(2.5rem);
+    transform: translateY(3rem) rotate(4deg);
     transition:
-      opacity 0.6s var(--ease-out),
-      transform 0.8s var(--ease-out),
+      opacity 0.5s var(--ease-out),
+      transform 0.8s var(--ease-back),
       visibility 0s 0.6s;
   }
 
   .story.is-pinned .story__chapter.is-past {
-    transform: translateY(-2.5rem);
+    transform: translate(-2rem, -3rem) rotate(-6deg);
   }
 
   .story.is-pinned .story__chapter.is-active {
     opacity: 1;
     visibility: visible;
     transform: none;
-    transition-delay: 0.15s, 0.15s, 0s;
+    transition-delay: 0.12s, 0.12s, 0s;
   }
 
   .story.is-pinned .story__chapter-year {
@@ -227,70 +536,206 @@ const firstYear = chapters[0].year.split('');
 </style>
 
 <script>
-  import { ScrollTrigger, gsap, initReveals } from '../../lib/motion';
-  import { tweenScene } from '../../lib/scene';
+  import { ScrollTrigger, gsap, initReveals, scrollToTarget } from '../../lib/motion';
 
   const section = document.querySelector<HTMLElement>('[data-story]')!;
+  const kinetic = section.querySelector<HTMLElement>('[data-kinetic]')!;
+  const coil = section.querySelector<SVGPathElement>('[data-coil]')!;
+  const faller = section.querySelector<HTMLElement>('[data-faller]')!;
+  const kws = Array.from(section.querySelectorAll<HTMLElement>('[data-kw]'));
+  const since = section.querySelector<HTMLElement>('[data-kw-since]')!;
+
   const track = section.querySelector<HTMLElement>('[data-story-track]')!;
+  const year = section.querySelector<HTMLElement>('[data-story-year]')!;
+  const circle = section.querySelector<SVGSVGElement>('[data-story-circle]')!;
   const items = Array.from(section.querySelectorAll<HTMLElement>('[data-chapter]'));
-  const dots = Array.from(section.querySelectorAll<HTMLElement>('[data-story-dot]'));
   const odos = Array.from(section.querySelectorAll<HTMLElement>('.odo'));
+  const railBtns = Array.from(section.querySelectorAll<HTMLButtonElement>('[data-goto]'));
+  const arrow = section.querySelector<SVGElement>('[data-story-arrow]')!;
+  const num = section.querySelector<HTMLElement>('[data-story-num]')!;
+  const prevBtn = section.querySelector<HTMLButtonElement>('[data-story-prev]')!;
+  const nextBtn = section.querySelector<HTMLButtonElement>('[data-story-next]')!;
+  const skipBtn = section.querySelector<HTMLButtonElement>('[data-story-skip]')!;
 
   let current = -1;
+  let st: ScrollTrigger | null = null;
+  let fillTimer = 0;
+
+  /* Круг вокруг года ведёт стикмен. Скролл задаёт только цель (ink.goal —
+     докуда должно быть нарисовано в этой главе), а линия (ink.k) движется
+     к ней с его скоростью: близко — шагом, отстал — бегом, но не быстрее
+     круга за MAX_LAP секунд. Назад — то же самое ластиком. Story двигает
+     кончик (data-draw-k) и говорит, чем он работает (data-draw-dir);
+     стикмен идёт за кончиком (Stickman.astro, drawAlong). */
+  const ink = { k: 0, goal: 0, hold: 0 };
+  const MAX_LAP = 1.3; // самый быстрый круг, с
+  const CLOSE = 0.6; // к какой доле главы круг должен быть замкнут
+  let tool: 'draw' | 'erase' = 'draw';
+  function setInk() {
+    year.style.setProperty('--circle', String(1.01 * (1 - ink.k)));
+    circle.dataset.drawK = ink.k.toFixed(4);
+  }
+  function setTool(dir: 'draw' | 'erase') {
+    if (dir === tool) return;
+    tool = dir;
+    circle.dataset.drawDir = dir;
+    // пока стикмен переворачивает карандаш — линия стоит
+    ink.hold = 0.6;
+  }
+  // Рисует только стикмен: пока он не встал к кругу (летит из другой секции),
+  // линия ждёт. Закреплённый режим и бегун включаются одним условием
+  // (без reduced motion), так что стикмен здесь всегда есть.
+  const penHere = () => circle.dataset.pen === 'on';
+
+  function tickInk(_t: number, deltaMs: number) {
+    const dt = Math.min(deltaMs, 50) / 1000;
+    const gap = ink.goal - ink.k;
+    if (Math.abs(gap) < 0.0005 || !penHere()) return;
+    // разворот нужен, только если цель заметно в другую сторону
+    if (Math.abs(gap) > 0.008) setTool(gap > 0 ? 'draw' : 'erase');
+    if (ink.hold > 0) {
+      ink.hold -= dt;
+      return;
+    }
+    if ((gap > 0) !== (tool === 'draw')) return;
+    // скорость: пропорциональна отставанию, но с потолком
+    const v = Math.min(1 / MAX_LAP, Math.abs(gap) * 3.2 + 0.04);
+    ink.k += Math.sign(gap) * Math.min(Math.abs(gap), v * dt);
+    setInk();
+  }
+
+  /** Смена главы: вперёд — старый круг брошен, начинает новый с нуля;
+   *  назад — круг прошлой главы уже нарисован, дальше стирает до цели. */
+  let seq = 0;
+  function circleFor(back: boolean) {
+    ink.k = back ? 1 : 0;
+    setTool(back ? 'erase' : 'draw');
+    // стикмен прыгает к новому кончику — пока летит, линия стоит
+    circle.dataset.drawSeq = String(++seq);
+    ink.hold = Math.max(ink.hold, 0.45);
+    setInk();
+  }
 
   function activate(i: number) {
     if (i === current) return;
+    const back = i < current;
     current = i;
+    circleFor(back);
     items.forEach((el, n) => {
       el.classList.toggle('is-active', n === i);
       el.classList.toggle('is-past', n < i);
     });
-    dots.forEach((d, n) => d.classList.toggle('is-active', n === i));
+    railBtns.forEach((b, n) => {
+      b.classList.toggle('is-active', n === i);
+      if (n === i) b.setAttribute('aria-current', 'step');
+      else b.removeAttribute('aria-current');
+    });
+    const btn = railBtns[i];
+    if (btn) arrow.style.setProperty('--arrow-y', `${btn.offsetTop + btn.offsetHeight / 2 - 10}px`);
+    num.textContent = String(i + 1).padStart(2, '0');
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i === items.length - 1;
+
     const digits = (items[i]?.dataset.year ?? '').split('');
     odos.forEach((o, n) => o.style.setProperty('--d', digits[n] ?? '0'));
-    tweenScene(Number(items[i]?.dataset.chapterScene) || 0);
+    // Год сначала прокручивается контуром, потом заштриховывается
+    year.classList.remove('is-filled');
+    clearTimeout(fillTimer);
+    fillTimer = window.setTimeout(() => year.classList.add('is-filled'), 650);
   }
+
+  /** Прокрутить к главе i (в закреплённом режиме глава = участок скролла). */
+  function goto(i: number) {
+    if (!st) return;
+    const n = items.length;
+    const k = Math.max(0, Math.min(n - 1, i));
+    // чуть дальше точки, где круг замыкается: по клику он обводит год целиком
+    scrollToTarget(st.start + ((k + CLOSE + 0.05) / n) * (st.end - st.start));
+  }
+  railBtns.forEach((b, i) => b.addEventListener('click', () => goto(i)));
+  prevBtn.addEventListener('click', () => goto(current - 1));
+  nextBtn.addEventListener('click', () => goto(current + 1));
+  skipBtn.addEventListener('click', () => scrollToTarget('#work'));
+
+  // Откуда влетают слова: смещение в долях ширины/высоты экрана (за кадром), поворот, масштаб.
+  // Смещение > половины экрана + ширина слова, поэтому до начала скролла слов не видно.
+  const scatter = [
+    { x: -1.0, y: -0.35, r: -24, s: 1.3 },
+    { x: 1.0, y: -0.2, r: 18, s: 0.8 },
+    { x: -0.3, y: 0.95, r: 14, s: 1.15 },
+    { x: 0.95, y: 0.55, r: -16, s: 1.2 },
+    { x: 0.4, y: -0.95, r: 12, s: 0.9 },
+  ];
 
   const mm = gsap.matchMedia();
 
-  // Desktop с анимациями: глава закреплена, главы сменяют друг друга по скроллу.
+  // Desktop с анимациями: перебивка и плеер закреплены
   mm.add('(min-width: 900px) and (prefers-reduced-motion: no-preference)', () => {
     section.classList.add('is-pinned');
     ScrollTrigger.refresh();
-    const st = ScrollTrigger.create({
+
+    // --- Перебивка ---
+    const tl = gsap.timeline({
+      scrollTrigger: { trigger: kinetic, start: 'top top', end: 'bottom bottom', scrub: 0.7 },
+    });
+    kws.forEach((w, i) => {
+      const s = scatter[i % scatter.length];
+      tl.fromTo(
+        w,
+        { x: () => s.x * innerWidth, y: () => s.y * innerHeight, rotate: s.r, scale: s.s },
+        { x: 0, y: 0, rotate: 0, scale: 1, ease: 'power3.out', duration: 0.55 },
+        i * 0.09,
+      );
+    });
+    const ss = { x: 0.2, y: 0.9 };
+    tl.fromTo(
+      since,
+      { x: () => ss.x * innerWidth, y: () => ss.y * innerHeight, rotate: 14, opacity: 0 },
+      { x: 0, y: 0, rotate: -1.2, opacity: 1, ease: 'power3.out', duration: 0.5 },
+      0.35,
+    )
+      .fromTo(coil, { '--coil': 1.01 }, { '--coil': 0, ease: 'none', duration: 0.75 }, 0)
+      .fromTo(
+        faller,
+        { y: () => -0.1 * innerHeight, rotate: -90 },
+        { y: () => innerHeight * 0.92, rotate: 270, ease: 'none', duration: 1 },
+        0,
+      )
+      .to(coil, { opacity: 0.25, duration: 0.25 }, 0.75);
+
+    // --- Плеер ---
+    st = ScrollTrigger.create({
       trigger: track,
       start: 'top top',
       end: 'bottom bottom',
-      onUpdate: (self) => activate(Math.min(items.length - 1, Math.floor(self.progress * items.length))),
-      onEnter: () => activate(Math.max(current, 0)),
-      onEnterBack: () => activate(Math.max(current, 0)),
-      onLeaveBack: () => tweenScene(0),
+      onUpdate: (self) => {
+        const n = items.length;
+        const f = self.progress * n;
+        const i = Math.min(n - 1, Math.floor(f));
+        activate(i);
+        // круг замыкается к CLOSE главы: остаток главы он стоит у готового круга
+        ink.goal = Math.min(1, (f - i) / CLOSE);
+      },
     });
     activate(0);
+    gsap.ticker.add(tickInk);
 
     return () => {
-      st.kill();
+      st?.kill();
+      st = null;
+      gsap.ticker.remove(tickInk);
+      ink.k = ink.goal = 0;
+      setInk();
       section.classList.remove('is-pinned');
       items.forEach((el) => el.classList.remove('is-active', 'is-past'));
       current = -1;
     };
   });
 
-  // Мобильные / reduced motion: обычный список, сцена меняется по каждой главе.
+  // Мобильные / reduced motion: обычный заголовок и список заметок
   mm.add('(max-width: 899px), (prefers-reduced-motion: reduce)', () => {
     items.forEach((el) => el.setAttribute('data-reveal', ''));
     initReveals(section);
-    const triggers = items.map((el) =>
-      ScrollTrigger.create({
-        trigger: el,
-        start: 'top 60%',
-        end: 'bottom 40%',
-        onToggle: (self) => self.isActive && tweenScene(Number(el.dataset.chapterScene) || 0),
-      }),
-    );
-    return () => {
-      triggers.forEach((t) => t.kill());
-      items.forEach((el) => el.removeAttribute('data-reveal'));
-    };
+    return () => items.forEach((el) => el.removeAttribute('data-reveal'));
   });
 </script>

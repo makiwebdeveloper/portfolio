@@ -1,0 +1,53 @@
+---
+/**
+ * «Станция» стикмена: статичная поза, отрисованная на сервере.
+ * - без JS, на мобильных и при reduced motion видна как обычная иллюстрация;
+ * - на десктопе бегун (Stickman.astro) прокладывает линию через станции
+ *   и в каждой принимает эту позу, а статичную фигуру прячет.
+ * Ноги фигуры стоят в точке (0,0) viewBox → это и есть точка на линии.
+ */
+import { figure, pose, propsFor, pts, HEAD_PATH, type PoseName } from '../../lib/stickman';
+
+interface Props {
+  pose: PoseName;
+  face?: 'left' | 'right';
+  /** Размер относительно 90px (по умолчанию 1.3). Бегун плавно масштабируется к нему. */
+  scale?: number;
+  class?: string;
+  /** Станция — ещё и точка бегуна (Hero: бегун стоит ровно на месте фигуры). */
+  perch?: boolean;
+}
+
+const { pose: name, face = 'right', scale = 1.3, class: className, perch = false } = Astro.props;
+const T = 0.15; // «момент» для живых поз (взмах руки и т.п.)
+const fig = figure(pose(name, T));
+const props = propsFor(name, fig, T);
+---
+
+<div
+  class:list={['station', className]}
+  data-station={name}
+  data-face={face}
+  data-scale={scale}
+  data-perch={perch ? name : undefined}
+  data-perch-edge={perch ? 'station' : undefined}
+  data-perch-face={perch ? face : undefined}
+  style={`--s: ${scale}`}
+  aria-hidden="true"
+>
+  <svg class="stick" viewBox="-45 -88 90 92" width="90" height="92">
+    <g transform={face === 'left' ? 'scale(-1 1)' : undefined}>
+      <g class="stick__body">
+        <polyline points={pts(fig.legB)}></polyline>
+        <polyline points={pts(fig.armB)}></polyline>
+        <polyline points={pts(fig.torso)}></polyline>
+        <polyline points={pts(fig.legF)}></polyline>
+        <polyline points={pts(fig.armF)}></polyline>
+        <path class="stick__head" d={HEAD_PATH} transform={`translate(${fig.head[0]} ${fig.head[1]})`}></path>
+      </g>
+      <g class="stick__props">
+        {props.map((p) => <path d={p.d} transform={p.transform} class:list={{ 'is-fill': p.fill }} />)}
+      </g>
+    </g>
+  </svg>
+</div>

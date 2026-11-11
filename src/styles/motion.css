@@ -2,18 +2,60 @@
    Срабатывают ТОЛЬКО когда есть класс .js на <html> (ставится инлайн-скриптом),
    иначе страница сразу показывается в готовом виде. */
 
+/* Появление: элемент будто кладут на стол — чуть сверху и с поворотом */
 .js [data-reveal] {
   opacity: 0;
-  transform: translate3d(0, 2.2rem, 0);
+  transform: translate3d(0, 1.6rem, 0) rotate(var(--reveal-rot, 1.5deg));
 }
 
 .js [data-reveal].is-in {
   opacity: 1;
   transform: none;
   transition:
-    opacity var(--dur-slow) var(--ease-out),
-    transform var(--dur-slow) var(--ease-out);
-  transition-delay: calc(var(--reveal-i, 0) * 80ms);
+    opacity 0.7s var(--ease-out),
+    transform 0.9s var(--ease-back);
+  transition-delay: calc(var(--reveal-i, 0) * 90ms);
+}
+
+/* Линии, которые «рисуются» при появлении: path с pathLength="1".
+   dasharray «1 2» + offset 1.01: в скрытом состоянии нет точки от round-cap.
+   Ставим data-draw на path (или на svg — тогда рисуются все path внутри). */
+.js [data-draw] path,
+.js path[data-draw] {
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1.01;
+}
+.js .is-in [data-draw] path,
+.js .is-in path[data-draw],
+.js [data-draw].is-in path,
+.js .is-drawn [data-draw] path,
+.js .is-drawn path[data-draw] {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.9s var(--ease-in-out);
+  transition-delay: calc(0.25s + var(--draw-delay, 0s));
+}
+
+/* Заголовок «пишется» маркером слева направо: [data-write] внутри [data-reveal].
+   Буквы не делим: у Caveat контекстные формы, в отдельных span он ломается.
+   Отрицательные inset — запас под выносные штрихи. */
+.js [data-write] {
+  clip-path: inset(-30% 100% -40% -6%);
+}
+.js .is-in [data-write],
+.js [data-write].is-in {
+  clip-path: inset(-30% -6% -40% -6%);
+  transition: clip-path 1.05s var(--ease-in-out) 0.12s;
+}
+
+/* Маркер-выделитель «проводится» слева направо */
+.js .mark {
+  background-size: 0% 58%;
+  transition: background-size 0.8s var(--ease-in-out) 0.3s;
+}
+.js .is-in .mark,
+.js .mark.is-in,
+.js .is-drawn .mark {
+  background-size: 100% 58%;
 }
 
 /* Деление на слова/символы (src/lib/split.ts) */
@@ -21,13 +63,17 @@
   display: inline-block;
   overflow: clip;
   vertical-align: top;
-  padding-bottom: 0.12em;
-  margin-bottom: -0.12em;
+  padding: 0.05em 0.12em 0.2em;
+  margin: -0.05em -0.12em -0.2em;
 }
 
+/* Запас по краям: рукописные штрихи вылезают за метрики буквы,
+   а у трансформированных inline-block браузер может их обрезать */
 .split-word,
 .split-char {
   display: inline-block;
+  padding: 0.12em 0.1em;
+  margin: -0.12em -0.1em;
 }
 
 /* Пока hero не стартовал, прячем его — иначе мелькнёт готовый вид */
@@ -40,6 +86,16 @@
     opacity: 1;
     transform: none;
   }
+  .js [data-draw] path,
+  .js path[data-draw] {
+    stroke-dashoffset: 0;
+  }
+  .js .mark {
+    background-size: 100% 58%;
+  }
+  .js [data-write] {
+    clip-path: none;
+  }
   .js.is-entering [data-hero-in] {
     visibility: visible;
   }
@@ -50,5 +106,33 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Смена языка (src/lib/relang.ts): видимое сразу в конечном состоянии,
+   без повторных «появлений». Класс снимается, когда страница встала на место. */
+.is-relang [data-reveal],
+.is-relang [data-draw] path,
+.is-relang path[data-draw],
+.is-relang [data-write],
+.is-relang .mark {
+  transition: none !important;
+}
+
+/* Переход между языковыми версиями: браузер держит старую страницу,
+   пока новая не готова, и делает кроссфейд (Chrome 126+, Safari 18.2+;
+   где не поддерживается — обычная навигация). */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

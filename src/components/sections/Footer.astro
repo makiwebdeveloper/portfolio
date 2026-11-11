@@ -1,6 +1,12 @@
 ---
-import { useT, type Lang } from '../../i18n';
+/**
+ * Футер-подпись: «спасибо», большая звезда-кнопка «наверх», подпись
+ * во всю ширину и лента дудлов внизу. Оторванный край листа сверху.
+ */
+import { pick, useT, type Lang } from '../../i18n';
 import { profile } from '../../data/profile';
+import { STAR_FILL } from '../../lib/doodles';
+import Star from '../sketch/Star.astro';
 
 interface Props {
   lang: Lang;
@@ -8,32 +14,228 @@ interface Props {
 const { lang } = Astro.props;
 const t = useT(lang);
 const year = new Date().getFullYear();
+const name = pick(profile.nameLocal, lang);
+
+// Ленточка дудлов: звезда, пузырёк, завиток, стрелка, галочка, крестик
+const doodles = [
+  `<path d="${STAR_FILL}" transform="scale(.24)" class="is-fill"/>`,
+  '<circle cx="12" cy="12" r="7"/>',
+  '<path d="M3 15c3-8 7-8 8-2s5 6 9-3"/>',
+  '<path d="M3 12h15M13 6l6 6-6 6"/>',
+  '<path d="M4 12l5 5c3-6 7-10 11-13"/>',
+  '<path d="M6 6l12 12M18 6L6 18"/>',
+  '<circle cx="12" cy="12" r="3" class="is-fill"/>',
+  '<path d="M4 8c4-4 12-4 16 0M4 16c4 4 12 4 16 0"/>',
+];
+const band = Array.from({ length: 4 }, () => doodles).flat();
 ---
 
-<footer class="footer" data-scene="1">
-  <div class="container footer__inner">
-    <p>© {year} {profile.name}</p>
-    <p class="footer__built">{t('footer.built')}</p>
-    <a href="#top" class="footer__top">{t('footer.top')} ↑</a>
+<footer class="footer">
+  <div class="container footer__top">
+    <div class="footer__thanks">
+      <p class="footer__stars" aria-hidden="true">
+        {Array.from({ length: 4 }, () => <Star />)}
+      </p>
+      <p class="footer__text">{t('footer.thanks')}</p>
+      <p class="micro">{t('footer.built')}</p>
+    </div>
+
+    <a href="#top" class="footer__star">
+      <Star variant="both" class="footer__star-svg" />
+      <span class="footer__star-label">{t('footer.top')} ↑</span>
+    </a>
+  </div>
+
+  <p class="footer__sign container" aria-label={`${name} © ${year}`}>
+    <span aria-hidden="true">{name}</span>
+    <span class="footer__line" aria-hidden="true"></span>
+    <span class="footer__year" aria-hidden="true">©{year}</span>
+  </p>
+
+  <div class="footer__band" aria-hidden="true">
+    <div class="footer__band-track">
+      {
+        [0, 1].map(() => (
+          <span class="footer__band-set">
+            {band.map((d) => (
+              <svg viewBox="0 0 24 24" set:html={d} />
+            ))}
+          </span>
+        ))
+      }
+    </div>
   </div>
 </footer>
 
 <style>
+  /* Оторванный край листа сверху */
   .footer {
-    padding-block: 2rem;
-    border-top: 1px solid var(--color-line);
-    font-size: var(--step--1);
-    color: var(--color-muted);
+    position: relative;
+    will-change: transform; /* свой слой, см. Work.astro */
+    margin: 2rem 0 0 calc(var(--lane) * -1);
+    padding: 3.4rem 0 0 var(--lane);
+    background: var(--color-surface);
+    overflow: clip;
+    clip-path: polygon(
+      0 12px, 4% 4px, 9% 13px, 15% 2px, 21% 10px, 27% 3px, 33% 12px, 40% 5px, 46% 13px, 52% 3px,
+      58% 11px, 64% 2px, 71% 12px, 77% 4px, 83% 13px, 89% 3px, 95% 11px, 100% 4px, 100% 100%, 0 100%
+    );
   }
 
-  .footer__inner {
+  .footer__top {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
-    gap: 0.6rem 2rem;
+    gap: 2rem;
   }
 
-  .footer__top:hover {
+  .footer__thanks {
+    display: grid;
+    gap: 0.7rem;
+    max-width: 30rem;
+  }
+  .footer__stars {
+    display: flex;
+    gap: 0.25rem;
+    color: var(--color-accent);
+  }
+  .footer__stars :global(svg) {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+  .footer__text {
+    font-weight: 600;
+  }
+
+  /* Большая звезда-кнопка */
+  .footer__star {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: clamp(9rem, 16vw, 13rem);
+    aspect-ratio: 1;
     color: var(--color-text);
+    transition: rotate 0.8s var(--ease-back);
+  }
+  .footer__star :global(.footer__star-svg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    --star-fill: var(--color-bg);
+    --star-stroke: 1.6;
+    transition: rotate 0.9s var(--ease-back);
+  }
+  .footer__star-label {
+    position: relative;
+    /* в «талию» звезды: две строки по центру */
+    max-width: 6.5em;
+    text-align: center;
+    line-height: 1.35;
+    padding: 0.1rem 0.35rem;
+    background: var(--color-bg);
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+  .footer__star:hover :global(.footer__star-svg),
+  .footer__star:focus-visible :global(.footer__star-svg) {
+    rotate: 90deg;
+  }
+  .footer__star:hover {
+    rotate: -6deg;
+  }
+
+  /* Подпись во всю ширину: имя ——— ©год */
+  .footer__sign {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.8rem, 2vw, 1.6rem);
+    margin-top: clamp(1.5rem, 4vw, 3rem);
+    font-family: var(--font-hand);
+    font-weight: 700;
+    font-size: clamp(2.6rem, 1rem + 6.5vw, 7.5rem);
+    line-height: 1.1;
+    white-space: nowrap;
+    color: var(--color-text);
+  }
+  .footer__line {
+    flex: 1;
+    min-width: 1rem;
+    height: 8px;
+    background: var(--color-line);
+    -webkit-mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
+    mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
+  }
+  .footer__year {
+    color: var(--color-accent);
+  }
+
+  /* Лента дудлов */
+  .footer__band {
+    display: flex;
+    overflow: hidden;
+    margin-top: 0.6rem;
+    padding: 0.9rem 0 1.1rem;
+    border-top: 1.5px dashed var(--color-line);
+    color: var(--color-muted);
+  }
+  .footer__band-track {
+    display: flex;
+    flex: none;
+    animation: band 40s linear infinite;
+  }
+  .footer__band-set {
+    display: flex;
+    flex: none;
+    gap: 1.4rem;
+    padding-right: 1.4rem;
+  }
+  .footer__band svg {
+    width: 1.3rem;
+    height: 1.3rem;
+    flex: none;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .footer__band svg:nth-child(3n) {
+    color: var(--color-accent);
+  }
+  .footer__band :global(.is-fill) {
+    fill: currentColor;
+    stroke: none;
+  }
+  @keyframes band {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  :global(.is-still) .footer__band-track {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .footer__band-track {
+      animation: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .footer__sign {
+      white-space: normal;
+      flex-wrap: wrap;
+      font-size: clamp(2.4rem, 11vw, 3.4rem);
+    }
+    .footer__line {
+      display: none;
+    }
   }
 </style>

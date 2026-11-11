@@ -8,6 +8,7 @@ import Work from './sections/Work.astro';
 import Skills from './sections/Skills.astro';
 import Contact from './sections/Contact.astro';
 import Footer from './sections/Footer.astro';
+import Divider from './sketch/Divider.astro';
 
 interface Props {
   lang: Lang;
@@ -18,9 +19,11 @@ const { lang } = Astro.props;
 <Base lang={lang}>
   <Hero lang={lang} />
   <Intro lang={lang} />
+  <Divider />
   <Story lang={lang} />
   <Work lang={lang} />
   <Skills lang={lang} />
+  <Divider flip />
   <Contact lang={lang} />
   <Footer lang={lang} />
 </Base>

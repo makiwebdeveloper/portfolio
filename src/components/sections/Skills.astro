@@ -1,6 +1,8 @@
 ---
 import { pick, useT, type Lang } from '../../i18n';
 import { skills, spoken } from '../../data/profile';
+import Underline from '../sketch/Underline.astro';
+import StickStation from '../sketch/StickStation.astro';
 
 interface Props {
   lang: Lang;
@@ -9,23 +11,37 @@ const { lang } = Astro.props;
 const t = useT(lang);
 
 const rows = [
-  { label: t('skills.languages'), items: skills.languages, dir: 'left', speed: 38 },
-  { label: t('skills.tech'), items: skills.tech, dir: 'right', speed: 46 },
-  { label: t('skills.tools'), items: skills.tools, dir: 'left', speed: 42 },
+  { label: t('skills.languages'), items: skills.languages, dir: 'left', speed: 40 },
+  { label: t('skills.tech'), items: skills.tech, dir: 'right', speed: 50 },
+  { label: t('skills.tools'), items: skills.tools, dir: 'left', speed: 44 },
 ];
+const tagTilts = [-3, 2, -1.5, 3];
+const toolCount = skills.languages.length + skills.tech.length + skills.tools.length;
 ---
 
-<section class="skills section" id="skills" tabindex="-1" data-scene="0" aria-labelledby="skills-title">
+<section class="skills section" id="skills" tabindex="-1" aria-labelledby="skills-title" data-frame-label={t('nav.skills')}>
+  <StickStation pose="juggle" class="lane-station" />
   <div class="container skills__head">
     <p class="eyebrow" data-reveal>{t('skills.eyebrow')}</p>
-    <h2 class="skills__title" id="skills-title" data-reveal style="--reveal-i: 1">{t('skills.title')}</h2>
+    <h2 class="skills__title" id="skills-title" data-reveal data-write style="--reveal-i: 1">
+      <span class="title-u">{t('skills.title')}<Underline variant="wave" perch="juggle" /></span>
+    </h2>
+    <p class="micro skills__count" data-reveal style="--reveal-i: 2">({toolCount} {t('skills.count')})</p>
   </div>
 
-  <div class="skills__rows">
+  <div class="skills__rows container">
     {
       rows.map((row, i) => (
-        <div class="marquee" data-reveal style={`--reveal-i: ${i}; --speed: ${row.speed}s`} data-dir={row.dir}>
-          <h3 class="marquee__label container">{row.label}</h3>
+        <div
+          class="marquee"
+          data-reveal
+          style={`--reveal-i: ${i}; --speed: ${row.speed}s`}
+          data-dir={row.dir}
+          data-perch={(['juggle', 'stand', 'point'] as const)[i % 3]}
+          data-perch-at={[0.8, 0.45, 0.88][i % 3]}
+          data-perch-face={i % 2 ? 'right' : 'left'}
+        >
+          <h3 class="marquee__label">{row.label}</h3>
           <div class="marquee__viewport">
             {/* Первая копия — для скринридеров, вторая — только для бесшовной петли */}
             <ul class="marquee__track" role="list">
@@ -44,12 +60,13 @@ const rows = [
     }
   </div>
 
-  <div class="container spoken" data-reveal>
+  <div class="container spoken" data-reveal data-perch="wave" data-perch-at="0.7" data-perch-face="left">
     <h3 class="marquee__label">{t('skills.spoken')}</h3>
     <ul class="spoken__list" role="list">
       {
-        spoken.map((s) => (
-          <li>
+        spoken.map((s, i) => (
+          <li class="paper" style={`--tilt: ${tagTilts[i % tagTilts.length]}deg`}>
+            <span class="spoken__hole" aria-hidden="true" />
             <span class="spoken__name">{pick(s.name, lang)}</span>
             <span class="spoken__level">{pick(s.level, lang)}</span>
           </li>
@@ -62,12 +79,15 @@ const rows = [
 <style>
   .skills {
     outline: none;
+    /* свой слой: при раскрытии проектов выше секция сдвигается без перерисовки */
+    will-change: transform;
+    --station-top: calc(var(--section-space) + 3.5rem);
   }
 
   .skills__head {
     display: grid;
-    gap: 1.2rem;
-    margin-bottom: clamp(2.5rem, 6vw, 4.5rem);
+    gap: 1rem;
+    margin-bottom: clamp(2.5rem, 6vw, 4rem);
   }
 
   .skills__title {
@@ -76,23 +96,47 @@ const rows = [
 
   .skills__rows {
     display: grid;
-    gap: clamp(1.5rem, 3vw, 2.5rem);
+    /* minmax(0, …): иначе бесконечная лента растягивает колонку и всю страницу */
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(1.6rem, 3vw, 2.6rem);
   }
 
   .marquee__label {
-    font-family: var(--font-body);
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-    margin-bottom: 0.6rem;
+    font-family: var(--font-hand);
+    font-size: var(--step-1);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-accent);
+    margin-bottom: 0.3rem;
+    rotate: -1.5deg;
+    width: fit-content;
   }
 
   .marquee__viewport {
+    position: relative;
     display: flex;
     overflow: hidden;
-    border-block: 1px solid var(--color-line);
-    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  /* верхняя и нижняя линии от руки */
+  .marquee__viewport::before,
+  .marquee__viewport::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background: var(--color-line);
+    -webkit-mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
+    mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
+  }
+  .marquee__viewport::before {
+    top: 0;
+  }
+  .marquee__viewport::after {
+    bottom: 0;
+    -webkit-mask-position: 160px 50%;
+    mask-position: 160px 50%;
   }
 
   .marquee__track {
@@ -104,27 +148,32 @@ const rows = [
   [data-dir='right'] .marquee__track {
     animation-direction: reverse;
   }
-  .marquee:hover .marquee__track {
+  .marquee:hover .marquee__track,
+  :global(.is-still) .marquee__track {
     animation-play-state: paused;
   }
 
   .marquee__track li {
     display: flex;
     align-items: center;
-    gap: clamp(1.2rem, 3vw, 2.5rem);
-    padding: 0.8rem 0 0.8rem clamp(1.2rem, 3vw, 2.5rem);
-    font-family: var(--font-display);
+    gap: clamp(1rem, 2.5vw, 2rem);
+    padding: 0.5rem 0 0.6rem clamp(1rem, 2.5vw, 2rem);
+    font-family: var(--font-hand);
+    font-weight: 600;
     font-size: var(--step-3);
     line-height: 1.1;
     white-space: nowrap;
   }
-  .marquee__track li::after {
-    content: '✦';
-    font-size: 0.4em;
-    color: var(--color-accent);
+  .marquee__track li:nth-child(3n + 2) {
+    rotate: -2deg;
   }
-  .marquee__track li:nth-child(even) {
-    font-style: italic;
+  .marquee__track li:nth-child(3n) {
+    rotate: 1.5deg;
+  }
+  .marquee__track li::after {
+    content: '✶';
+    font-size: 0.5em;
+    color: var(--color-accent);
   }
 
   @keyframes marquee {
@@ -148,6 +197,7 @@ const rows = [
     }
   }
 
+  /* --- Языки: бумажные бирки на ниточке --- */
   .spoken {
     margin-top: clamp(3rem, 7vw, 5rem);
   }
@@ -155,26 +205,43 @@ const rows = [
   .spoken__list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-    gap: 1rem;
+    gap: 1.4rem;
+    margin-top: 0.8rem;
   }
 
   .spoken__list li {
     display: grid;
-    gap: 0.2rem;
-    padding: 1.1rem 1.2rem;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius);
-    background: color-mix(in oklch, var(--color-surface) 60%, transparent);
+    gap: 0.1rem;
+    padding: 1rem 1.2rem 1.1rem 2.6rem;
+    border-radius: 6px 22px 22px 6px / 6px 50% 50% 6px;
+    transition: rotate 0.5s var(--ease-back);
+  }
+  .spoken__list li:hover {
+    rotate: 0deg;
+  }
+
+  .spoken__hole {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-top: -0.375rem;
+    border-radius: 50%;
+    border: 2px solid var(--color-line);
+    background: var(--color-bg);
   }
 
   .spoken__name {
-    font-family: var(--font-display);
+    font-family: var(--font-hand);
+    font-weight: 700;
     font-size: var(--step-2);
-    line-height: 1.1;
+    line-height: 1;
   }
 
   .spoken__level {
     font-size: var(--step--1);
+    font-weight: 600;
     color: var(--color-muted);
   }
 </style>

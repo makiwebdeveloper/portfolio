@@ -1,0 +1,47 @@
+---
+/**
+ * Рукописное подчёркивание/обводка под текстом. Ставится внутрь элемента
+ * с position: relative. Рисуется при появлении (родитель .is-in / .is-drawn).
+ */
+interface Props {
+  variant?: 'wave' | 'double';
+  class?: string;
+  /** Точка стикмена на подчёркивании: поза, место вдоль линии (0…1) и куда смотрит. */
+  perch?: string;
+  perchAt?: number;
+  perchFace?: 'left' | 'right';
+}
+const { variant = 'wave', class: className, perch, perchAt = 1, perchFace = 'right' } = Astro.props;
+const perchAttrs = perch
+  ? { 'data-perch': perch, 'data-perch-edge': 'mid', 'data-perch-at': perchAt, 'data-perch-face': perchFace }
+  : {};
+
+const paths: Record<NonNullable<Props['variant']>, string[]> = {
+  wave: ['M4 14c30-8 60 4 92-2s64-8 100-2 70 6 100-1'],
+  double: ['M4 10c70-6 150-6 290-2', 'M30 20c60-4 140-6 230-1'],
+};
+---
+
+<svg
+  class:list={['underline', `underline--${variant}`, className]}
+  viewBox="0 0 300 26"
+  preserveAspectRatio="none"
+  aria-hidden="true"
+  data-draw
+  {...perchAttrs}
+>
+  {paths[variant].map((d, i) => <path class="scribble" pathLength="1" d={d} style={`--draw-delay: ${i * 0.3}s`} />)}
+</svg>
+
+<style>
+  .underline {
+    position: absolute;
+    left: -0.1em;
+    bottom: -0.32em;
+    width: calc(100% + 0.2em);
+    height: 0.38em;
+    overflow: visible;
+    color: var(--color-accent);
+    pointer-events: none;
+  }
+</style>

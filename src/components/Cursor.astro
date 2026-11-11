@@ -1,36 +1,32 @@
 ---
 /**
- * Свой курсор: точка + кольцо с запаздыванием, звезда над ссылками,
- * след из звёздочек и вспышка при клике. Только для мыши
- * (hover:hover + pointer:fine) и без prefers-reduced-motion.
- * Все цвета берутся из токенов (--color-text / --color-particle).
+ * Курсор-карандаш: острие точно в точке мыши, наклон зависит от скорости,
+ * за ним тающий след грифеля (canvas), по клику — «вспышка» из штрихов.
+ * Над ссылками карандаш приподнимается, data-cursor="Text" показывает
+ * бумажную записку с подписью. Только для мыши и без reduced motion.
+ * Цвета: токены --pencil-* (одинаковые днём и ночью).
  */
-const star = 'M12 0C12.6 7.8 16.2 11.4 24 12C16.2 12.6 12.6 16.2 12 24C11.4 16.2 7.8 12.6 0 12C7.8 11.4 11.4 7.8 12 0Z';
-const TRAIL = 14;
-const BURST = 8;
 ---
 
-<div class="cursor" data-cursor-root aria-hidden="true">
-  <div class="cursor__trail">
-    {
-      Array.from({ length: TRAIL }, () => (
-        <svg class="cursor__stamp" viewBox="0 0 24 24">
-          <path d={star} />
-        </svg>
-      ))
-    }
-  </div>
-  <div class="cursor__burst">
-    {Array.from({ length: BURST }, () => <span class="cursor__ray" />)}
-  </div>
-  <div class="cursor__ring"><span class="cursor__label"></span></div>
-  <div class="cursor__dot">
-    <svg class="cursor__star" viewBox="0 0 24 24"><path d={star} /></svg>
+<div class="pcursor is-hidden" data-cursor-root aria-hidden="true">
+  <canvas class="pcursor__canvas" data-cursor-canvas></canvas>
+  <div class="pcursor__note"><span class="pcursor__label"></span></div>
+  <div class="pcursor__pencil">
+    <svg viewBox="0 0 12 57" width="15" height="71">
+      <g stroke-linejoin="round" stroke-width="1.1">
+        <path class="p-eraser" d="M2.2 1h7.6q1.2 0 1.2 1.2V8H1V2.2Q1 1 2.2 1z"></path>
+        <path class="p-ferrule" d="M1 8h10v5H1z"></path>
+        <path class="p-body" d="M1 13h10v29H1z"></path>
+        <path class="p-stripe" d="M4.3 13v29M7.7 13v29"></path>
+        <path class="p-wood" d="M1 42h10l-5 14z"></path>
+        <path class="p-lead" d="M4.3 51.2h3.4L6 56z"></path>
+      </g>
+    </svg>
   </div>
 </div>
 
 <style>
-  .cursor {
+  .pcursor {
     display: none;
   }
 
@@ -39,232 +35,259 @@ const BURST = 8;
     cursor: none !important;
   }
 
-  :global(html.has-cursor) .cursor {
+  :global(html.has-cursor) .pcursor {
     display: block;
     position: fixed;
     inset: 0;
     z-index: 1001;
     pointer-events: none;
-    color: var(--color-text);
   }
 
-  .cursor__dot,
-  .cursor__ring,
-  .cursor__stamp,
-  .cursor__ray {
+  .pcursor__canvas {
     position: fixed;
-    top: 0;
-    left: 0;
-    will-change: transform;
-  }
-
-  /* Точка = настоящая позиция мыши */
-  .cursor__dot {
-    width: 8px;
-    height: 8px;
-    margin: -4px 0 0 -4px;
-    border-radius: 50%;
-    background: currentColor;
-    transition:
-      width 0.3s var(--ease-out),
-      height 0.3s var(--ease-out),
-      margin 0.3s var(--ease-out),
-      background 0.3s;
-  }
-
-  .cursor__star {
-    position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
-    fill: var(--color-accent);
-    opacity: 0;
-    transform: scale(0.2) rotate(-90deg);
-    transition:
-      opacity 0.3s,
-      transform 0.5s var(--ease-out);
   }
 
-  /* Кольцо = догоняет с задержкой */
-  .cursor__ring {
-    width: 36px;
-    height: 36px;
-    margin: -18px 0 0 -18px;
-    border: 1px solid color-mix(in oklch, currentColor 45%, transparent);
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
+  /* Обёртка стоит острием в точке мыши; поворот — вокруг острия */
+  .pcursor__pencil {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    rotate: 32deg;
+    scale: 1;
     transition:
-      width 0.4s var(--ease-out),
-      height 0.4s var(--ease-out),
-      margin 0.4s var(--ease-out),
-      background 0.3s,
-      border-color 0.3s,
-      opacity 0.3s;
+      rotate 0.25s var(--ease-out),
+      scale 0.35s var(--ease-back),
+      opacity 0.2s;
+    will-change: translate;
+  }
+  .pcursor__pencil svg {
+    position: absolute;
+    max-width: none; /* reset в base.css сжал бы SVG до ширины обёртки (0) */
+    left: -7.5px;
+    top: -70px;
+    overflow: visible;
+    filter: drop-shadow(2px 3px 0 var(--color-shadow));
   }
 
-  .cursor__label {
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--color-bg);
+  .pcursor__pencil g {
+    stroke: var(--pencil-ink);
+  }
+  .p-eraser {
+    fill: var(--pencil-eraser);
+  }
+  .p-ferrule {
+    fill: var(--pencil-ferrule);
+  }
+  .p-body {
+    fill: var(--pencil-body);
+  }
+  .p-stripe {
+    fill: none;
+    stroke: color-mix(in oklch, var(--pencil-ink) 35%, transparent);
+    stroke-width: 0.7;
+  }
+  .p-wood {
+    fill: var(--pencil-wood);
+  }
+  .p-lead {
+    fill: var(--pencil-ink);
+  }
+
+  .pcursor.is-link .pcursor__pencil {
+    scale: 1.15;
+  }
+  .pcursor.is-down .pcursor__pencil {
+    scale: 0.92;
+  }
+  .pcursor.is-hidden .pcursor__pencil,
+  .pcursor.is-hidden .pcursor__note {
     opacity: 0;
-    transition: opacity 0.2s;
+  }
+
+  /* Записка с подписью */
+  .pcursor__note {
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 0.15rem 0.7rem 0.3rem;
+    background: var(--color-surface);
+    border-radius: var(--wobble-soft);
+    box-shadow: 1px 2px 0 var(--color-shadow);
+    font-family: var(--font-hand);
+    font-size: 1.35rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--color-text);
     white-space: nowrap;
+    opacity: 0;
+    scale: 0.6;
+    rotate: -10deg;
+    transform-origin: 0 0;
+    transition:
+      opacity 0.2s,
+      scale 0.35s var(--ease-back),
+      rotate 0.35s var(--ease-back);
   }
-
-  /* --- Состояние: над ссылкой/кнопкой --- */
-  .cursor.is-link .cursor__dot {
-    width: 22px;
-    height: 22px;
-    margin: -11px 0 0 -11px;
-    background: transparent;
-  }
-  .cursor.is-link .cursor__star {
+  .pcursor.is-label .pcursor__note {
     opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
-  .cursor.is-link .cursor__ring {
-    width: 56px;
-    height: 56px;
-    margin: -28px 0 0 -28px;
-    border-color: color-mix(in oklch, var(--color-accent) 50%, transparent);
-  }
-
-  /* --- Состояние: над элементом с подписью (data-cursor="View") --- */
-  .cursor.is-label .cursor__ring {
-    width: 84px;
-    height: 84px;
-    margin: -42px 0 0 -42px;
-    background: var(--color-text);
-    border-color: transparent;
-  }
-  .cursor.is-label .cursor__label {
-    opacity: 1;
-  }
-  .cursor.is-label .cursor__dot {
-    opacity: 0;
-  }
-
-  .cursor.is-hidden .cursor__dot,
-  .cursor.is-hidden .cursor__ring {
-    opacity: 0;
-  }
-
-  .cursor.is-down .cursor__ring {
-    width: 26px;
-    height: 26px;
-    margin: -13px 0 0 -13px;
-  }
-
-  /* След */
-  .cursor__stamp {
-    width: 10px;
-    height: 10px;
-    margin: -5px 0 0 -5px;
-    fill: var(--color-particle);
-    opacity: 0;
-  }
-
-  /* Вспышка */
-  .cursor__ray {
-    width: 2px;
-    height: 10px;
-    margin: -5px 0 0 -1px;
-    border-radius: 2px;
-    background: var(--color-accent);
-    opacity: 0;
+    scale: 1;
+    rotate: -3deg;
   }
 </style>
 
 <script>
   import { gsap, finePointer, reducedMotion } from '../lib/motion';
+  import { STAR_FILL } from '../lib/doodles';
+
+  const STAR = new Path2D(STAR_FILL);
 
   const root = document.querySelector<HTMLElement>('[data-cursor-root]')!;
-  const dot = root.querySelector<HTMLElement>('.cursor__dot')!;
-  const ring = root.querySelector<HTMLElement>('.cursor__ring')!;
-  const label = root.querySelector<HTMLElement>('.cursor__label')!;
-  const stamps = Array.from(root.querySelectorAll<SVGElement>('.cursor__stamp'));
-  const rays = Array.from(root.querySelectorAll<HTMLElement>('.cursor__ray'));
+  const pencil = root.querySelector<HTMLElement>('.pcursor__pencil')!;
+  const note = root.querySelector<HTMLElement>('.pcursor__note')!;
+  const label = root.querySelector<HTMLElement>('.pcursor__label')!;
+  const canvas = root.querySelector<HTMLCanvasElement>('[data-cursor-canvas]')!;
+  const ctx = canvas.getContext('2d');
 
   const INTERACTIVE = 'a, button, [role="button"], label, summary, [data-cursor]';
+  const LIFE = 420; // мс, сколько живёт след
+  const BASE_TILT = 32;
 
   let enabled = false;
-  const mouse = { x: -100, y: -100 };
-  const ringPos = { x: -100, y: -100 };
-  let lastStamp = { x: 0, y: 0 };
-  let stampIndex = 0;
   let raf = 0;
+  let dpr = 1;
+  let ink = '';
+  let accent = '';
+  let hovering = false;
+  let dirty: [number, number, number, number] | null = null;
+  const points: { x: number; y: number; t: number }[] = [];
+  const sparks: { x: number; y: number; a: number; t: number }[] = [];
+  let lastX = 0;
 
-  const setX = (el: Element, x: number, y: number, extra = '') =>
-    ((el as HTMLElement).style.transform = `translate3d(${x}px, ${y}px, 0) ${extra}`);
-
-  function tick() {
-    raf = requestAnimationFrame(tick);
-    ringPos.x += (mouse.x - ringPos.x) * 0.18;
-    ringPos.y += (mouse.y - ringPos.y) * 0.18;
-    setX(dot, mouse.x, mouse.y);
-    setX(ring, ringPos.x, ringPos.y);
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    ink = cs.getPropertyValue('--color-particle').trim();
+    accent = cs.getPropertyValue('--color-accent').trim();
   }
 
-  function spawnStamp(x: number, y: number) {
-    const s = stamps[stampIndex];
-    stampIndex = (stampIndex + 1) % stamps.length;
-    const rot = Math.random() * 90;
-    const scale = 0.6 + Math.random() * 0.7;
-    gsap.killTweensOf(s);
-    gsap.fromTo(
-      s,
-      { x, y, opacity: 0.9, scale, rotate: rot },
-      { y: y + 14, opacity: 0, scale: 0.2, rotate: rot + 60, duration: 0.9, ease: 'power2.out' },
-    );
+  function resize() {
+    // след тонкий и тающий — полного ретина-разрешения не нужно
+    dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    dirty = null;
+    canvas.width = innerWidth * dpr;
+    canvas.height = innerHeight * dpr;
   }
 
-  function burst(x: number, y: number) {
-    rays.forEach((r, i) => {
-      const angle = (i / rays.length) * 360;
-      gsap.killTweensOf(r);
-      gsap.fromTo(
-        r,
-        { x, y, rotate: angle, opacity: 1, scaleY: 1, yPercent: 0, transformOrigin: '50% 50%' },
-        {
-          opacity: 0,
-          scaleY: 0.3,
-          duration: 0.55,
-          ease: 'power3.out',
-          // вылет вдоль своего угла
-          x: x + Math.sin((angle * Math.PI) / 180) * 26,
-          y: y - Math.cos((angle * Math.PI) / 180) * 26,
-        },
-      );
-    });
+  function loop() {
+    raf = 0;
+    if (!ctx) return;
+    const now = performance.now();
+    while (points.length && now - points[0].t > LIFE) points.shift();
+    while (sparks.length && now - sparks[0].t > 450) sparks.shift();
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // чистим только то, что рисовали на прошлом кадре, а не весь экран
+    if (dirty) ctx.clearRect(dirty[0], dirty[1], dirty[2] - dirty[0], dirty[3] - dirty[1]);
+    dirty = null;
+    const grow = (x: number, y: number, r: number) => {
+      if (!dirty) dirty = [x - r, y - r, x + r, y + r];
+      else {
+        dirty[0] = Math.min(dirty[0], x - r);
+        dirty[1] = Math.min(dirty[1], y - r);
+        dirty[2] = Math.max(dirty[2], x + r);
+        dirty[3] = Math.max(dirty[3], y + r);
+      }
+    };
+    for (const p of points) grow(p.x, p.y, 4);
+    for (const s of sparks) grow(s.x, s.y, 40);
+    ctx.lineCap = 'round';
+
+    // след грифеля: каждый отрезок тоньше и прозрачнее с возрастом
+    ctx.strokeStyle = hovering ? accent : ink;
+    for (let i = 1; i < points.length; i++) {
+      const k = 1 - (now - points[i].t) / LIFE;
+      ctx.globalAlpha = Math.max(0, k) * 0.75;
+      ctx.lineWidth = 0.6 + 1.3 * k;
+      ctx.beginPath();
+      ctx.moveTo(points[i - 1].x, points[i - 1].y);
+      ctx.lineTo(points[i].x, points[i].y);
+      ctx.stroke();
+    }
+
+    // вспышка по клику: короткие штрихи разлетаются от острия
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    for (const s of sparks) {
+      const k = (now - s.t) / 450;
+      const e = 1 - (1 - k) ** 3;
+      ctx.globalAlpha = 1 - k;
+      const r1 = 8 + 14 * e;
+      const r2 = r1 + 9 * (1 - k);
+      ctx.beginPath();
+      ctx.moveTo(s.x + Math.cos(s.a) * r1, s.y + Math.sin(s.a) * r1);
+      ctx.lineTo(s.x + Math.cos(s.a) * r2, s.y + Math.sin(s.a) * r2);
+      ctx.stroke();
+    }
+    // штамп-звёздочка в точке клика: выпрыгивает и тает
+    const stamps = sparks.filter((_, i) => i % 7 === 0);
+    ctx.fillStyle = accent;
+    for (const s of stamps) {
+      const k = (now - s.t) / 450;
+      const pop = k < 0.4 ? 1 - (1 - k / 0.4) ** 3 : 1;
+      const size = 22 * pop * (1.15 - 0.15 * pop);
+      ctx.globalAlpha = Math.min(1, (1 - k) * 1.6);
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.a + k * 1.2);
+      ctx.scale(size / 100, size / 100);
+      ctx.translate(-50, -50);
+      ctx.fill(STAR);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+
+    if (points.length > 1 || sparks.length) raf = requestAnimationFrame(loop);
   }
+  const kick = () => {
+    if (!raf) raf = requestAnimationFrame(loop);
+  };
 
   function onMove(e: PointerEvent) {
     if (e.pointerType !== 'mouse') return;
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
+    const x = e.clientX;
+    const y = e.clientY;
+    pencil.style.translate = `${x}px ${y}px`;
+    note.style.translate = `${x + 18}px ${y + 14}px`;
     root.classList.remove('is-hidden');
-    const dx = mouse.x - lastStamp.x;
-    const dy = mouse.y - lastStamp.y;
-    if (dx * dx + dy * dy > 38 * 38) {
-      lastStamp = { x: mouse.x, y: mouse.y };
-      spawnStamp(mouse.x, mouse.y);
-    }
+    // наклон от скорости: ведёшь вправо — карандаш «тянется» назад
+    const v = gsap.utils.clamp(-16, 16, (x - lastX) * 0.8);
+    pencil.style.rotate = `${(hovering ? BASE_TILT - 14 : BASE_TILT) - v}deg`;
+    lastX = x;
+    points.push({ x, y, t: performance.now() });
+    if (points.length > 80) points.shift();
+    kick();
   }
 
   function onOver(e: PointerEvent) {
     const target = (e.target as Element).closest<HTMLElement>(INTERACTIVE);
     const text = target?.dataset.cursor;
+    hovering = !!target;
     root.classList.toggle('is-label', !!text);
-    root.classList.toggle('is-link', !!target && !text);
+    root.classList.toggle('is-link', hovering);
     if (text) label.textContent = text;
   }
 
   const onDown = (e: PointerEvent) => {
     if (e.pointerType !== 'mouse') return;
     root.classList.add('is-down');
-    burst(e.clientX, e.clientY);
+    const t = performance.now();
+    const base = Math.random() * Math.PI;
+    for (let i = 0; i < 7; i++) sparks.push({ x: e.clientX, y: e.clientY, a: base + (i / 7) * Math.PI * 2, t });
+    kick();
   };
   const onUp = () => root.classList.remove('is-down');
   const onLeave = () => root.classList.add('is-hidden');
@@ -273,24 +296,30 @@ const BURST = 8;
     if (enabled) return;
     enabled = true;
     document.documentElement.classList.add('has-cursor');
+    readColors();
+    resize();
+    window.addEventListener('resize', resize);
+    window.addEventListener('colorschange', readColors);
     window.addEventListener('pointermove', onMove, { passive: true });
     document.addEventListener('pointerover', onOver, { passive: true });
     window.addEventListener('pointerdown', onDown, { passive: true });
     window.addEventListener('pointerup', onUp, { passive: true });
     document.documentElement.addEventListener('pointerleave', onLeave);
-    raf = requestAnimationFrame(tick);
   }
 
   function disable() {
     if (!enabled) return;
     enabled = false;
     document.documentElement.classList.remove('has-cursor');
+    window.removeEventListener('resize', resize);
+    window.removeEventListener('colorschange', readColors);
     window.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerover', onOver);
     window.removeEventListener('pointerdown', onDown);
     window.removeEventListener('pointerup', onUp);
     document.documentElement.removeEventListener('pointerleave', onLeave);
     cancelAnimationFrame(raf);
+    raf = 0;
   }
 
   const sync = () => (finePointer.matches && !reducedMotion.matches ? enable() : disable());

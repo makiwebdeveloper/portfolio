@@ -6,15 +6,12 @@ export interface Chapter {
   place: Localized;
   title: Localized;
   text: Localized;
-  /** 0 = light scene, 1 = dark scene. The page background fades to this value. */
-  scene: number;
 }
 
 export const chapters: Chapter[] = [
   {
     id: 'kharkiv',
     year: '2020',
-    scene: 0,
     place: { en: 'Kharkiv, Ukraine', sv: 'Charkiv, Ukraina', uk: 'Харків, Україна' },
     title: { en: 'First lines of code', sv: 'De första kodraderna', uk: 'Перші рядки коду' },
     text: {
@@ -26,7 +23,6 @@ export const chapters: Chapter[] = [
   {
     id: 'nix',
     year: '2023',
-    scene: 0,
     place: { en: 'NIX Solutions', sv: 'NIX Solutions', uk: 'NIX Solutions' },
     title: { en: 'The first real team', sv: 'Det första riktiga teamet', uk: 'Перша справжня команда' },
     text: {
@@ -38,7 +34,6 @@ export const chapters: Chapter[] = [
   {
     id: 'novabit',
     year: '2024',
-    scene: 0,
     place: { en: 'NovaBit · Freelance', sv: 'NovaBit · Frilans', uk: 'NovaBit · Фриланс' },
     title: { en: 'Going fullstack', sv: 'Steget till fullstack', uk: 'Перехід у fullstack' },
     text: {
@@ -50,7 +45,6 @@ export const chapters: Chapter[] = [
   {
     id: 'stockholm',
     year: '2024',
-    scene: 1,
     place: { en: 'Stockholm, Sweden', sv: 'Stockholm, Sverige', uk: 'Стокгольм, Швеція' },
     title: { en: 'A new city', sv: 'En ny stad', uk: 'Нове місто' },
     text: {
@@ -62,7 +56,6 @@ export const chapters: Chapter[] = [
   {
     id: 'devsum',
     year: '2026',
-    scene: 1,
     place: { en: 'Active Solution · DevSum', sv: 'Active Solution · DevSum', uk: 'Active Solution · DevSum' },
     title: { en: 'On the conference floor', sv: 'På konferensgolvet', uk: 'На конференції' },
     text: {

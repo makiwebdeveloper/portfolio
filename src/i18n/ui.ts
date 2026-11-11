@@ -25,8 +25,8 @@ const en = {
   'theme.day': 'Day',
   'theme.night': 'Night',
   'theme.toggle': 'Switch colour theme',
-  'bg.pause': 'Pause background animation',
-  'bg.play': 'Play background animation',
+  'bg.pause': 'Pause the doodles',
+  'bg.play': 'Animate the doodles',
   'lang.label': 'Language',
 
   'hero.role': 'Fullstack Developer',
@@ -34,6 +34,15 @@ const en = {
   'hero.greeting': 'Hi, I’m',
   'hero.scroll': 'Scroll',
   'hero.available': 'Open to new roles · 2026',
+  'hero.ticket': 'Boarding pass',
+  'hero.from': 'Kharkiv',
+  'hero.to': 'Stockholm',
+  'hero.todo': 'Checklist',
+  'hero.todo.front': 'Frontend',
+  'hero.todo.back': 'Backend',
+  'hero.todo.3d': 'Real-time & 3D',
+  'hero.todo.team': 'Your team?',
+  'frame.hello': 'Hello',
 
   'intro.eyebrow': 'In short',
   'intro.text':
@@ -43,6 +52,8 @@ const en = {
   'story.title': 'From Kharkiv to Stockholm',
   'story.next': 'Next chapter',
   'story.prev': 'Previous chapter',
+  'story.skip': 'Skip',
+  'story.since': '2020 → today',
 
   'work.eyebrow': 'Selected work',
   'work.title': 'Things I’ve built',
@@ -55,6 +66,7 @@ const en = {
   'work.open': 'Open',
   'work.close': 'Close',
   'work.highlight': 'Did you know?',
+  'work.projects': 'projects',
 
   'skills.eyebrow': 'Toolbox',
   'skills.title': 'What I work with',
@@ -62,6 +74,7 @@ const en = {
   'skills.tech': 'Frameworks & libraries',
   'skills.tools': 'Data & tools',
   'skills.spoken': 'I speak',
+  'skills.count': 'tools',
 
   'contact.eyebrow': 'Contact',
   'contact.title': 'Let’s build something together',
@@ -70,8 +83,9 @@ const en = {
   'contact.copied': 'Email copied',
   'contact.cv': 'Download CV',
 
-  'footer.built': 'Built with Astro, GSAP, Lenis and OGL.',
+  'footer.built': 'Drawn by hand with Astro, GSAP and Lenis.',
   'footer.top': 'Back to top',
+  'footer.thanks': 'Thanks for scrolling all the way down. Have a great day!',
 };
 
 export type UIKey = keyof typeof en;
@@ -94,8 +108,8 @@ const sv: Record<UIKey, string> = {
   'theme.day': 'Dag',
   'theme.night': 'Natt',
   'theme.toggle': 'Byt färgtema',
-  'bg.pause': 'Pausa bakgrundsanimationen',
-  'bg.play': 'Spela bakgrundsanimationen',
+  'bg.pause': 'Pausa klottret',
+  'bg.play': 'Animera klottret',
   'lang.label': 'Språk',
 
   'hero.role': 'Fullstackutvecklare',
@@ -103,6 +117,15 @@ const sv: Record<UIKey, string> = {
   'hero.greeting': 'Hej, jag heter',
   'hero.scroll': 'Scrolla',
   'hero.available': 'Öppen för nya roller · 2026',
+  'hero.ticket': 'Boardingkort',
+  'hero.from': 'Charkiv',
+  'hero.to': 'Stockholm',
+  'hero.todo': 'Checklista',
+  'hero.todo.front': 'Frontend',
+  'hero.todo.back': 'Backend',
+  'hero.todo.3d': 'Realtid & 3D',
+  'hero.todo.team': 'Ditt team?',
+  'frame.hello': 'Hej',
 
   'intro.eyebrow': 'Kort sagt',
   'intro.text':
@@ -112,6 +135,8 @@ const sv: Record<UIKey, string> = {
   'story.title': 'Från Charkiv till Stockholm',
   'story.next': 'Nästa kapitel',
   'story.prev': 'Föregående kapitel',
+  'story.skip': 'Hoppa över',
+  'story.since': '2020 → idag',
 
   'work.eyebrow': 'Utvalda projekt',
   'work.title': 'Saker jag har byggt',
@@ -124,6 +149,7 @@ const sv: Record<UIKey, string> = {
   'work.open': 'Öppna',
   'work.close': 'Stäng',
   'work.highlight': 'Visste du?',
+  'work.projects': 'projekt',
 
   'skills.eyebrow': 'Verktygslåda',
   'skills.title': 'Det här jobbar jag med',
@@ -131,6 +157,7 @@ const sv: Record<UIKey, string> = {
   'skills.tech': 'Ramverk & bibliotek',
   'skills.tools': 'Data & verktyg',
   'skills.spoken': 'Jag talar',
+  'skills.count': 'verktyg',
 
   'contact.eyebrow': 'Kontakt',
   'contact.title': 'Låt oss bygga något tillsammans',
@@ -139,8 +166,9 @@ const sv: Record<UIKey, string> = {
   'contact.copied': 'E-post kopierad',
   'contact.cv': 'Ladda ner CV',
 
-  'footer.built': 'Byggd med Astro, GSAP, Lenis och OGL.',
+  'footer.built': 'Handritad med Astro, GSAP och Lenis.',
   'footer.top': 'Till toppen',
+  'footer.thanks': 'Tack för att du scrollade ända hit. Ha en fin dag!',
 };
 
 const uk: Record<UIKey, string> = {
@@ -161,8 +189,8 @@ const uk: Record<UIKey, string> = {
   'theme.day': 'День',
   'theme.night': 'Ніч',
   'theme.toggle': 'Змінити тему',
-  'bg.pause': 'Зупинити анімацію фону',
-  'bg.play': 'Запустити анімацію фону',
+  'bg.pause': 'Зупинити малюнки',
+  'bg.play': 'Оживити малюнки',
   'lang.label': 'Мова',
 
   'hero.role': 'Fullstack-розробник',
@@ -170,6 +198,15 @@ const uk: Record<UIKey, string> = {
   'hero.greeting': 'Привіт, я',
   'hero.scroll': 'Гортайте',
   'hero.available': 'Відкритий до нових ролей · 2026',
+  'hero.ticket': 'Посадковий талон',
+  'hero.from': 'Харків',
+  'hero.to': 'Стокгольм',
+  'hero.todo': 'Чекліст',
+  'hero.todo.front': 'Frontend',
+  'hero.todo.back': 'Backend',
+  'hero.todo.3d': 'Real-time і 3D',
+  'hero.todo.team': 'Ваша команда?',
+  'frame.hello': 'Привіт',
 
   'intro.eyebrow': 'Коротко',
   'intro.text':
@@ -179,6 +216,8 @@ const uk: Record<UIKey, string> = {
   'story.title': 'Від Харкова до Стокгольма',
   'story.next': 'Наступний розділ',
   'story.prev': 'Попередній розділ',
+  'story.skip': 'Пропустити',
+  'story.since': '2020 → сьогодні',
 
   'work.eyebrow': 'Вибрані роботи',
   'work.title': 'Що я створив',
@@ -191,6 +230,7 @@ const uk: Record<UIKey, string> = {
   'work.open': 'Відкрити',
   'work.close': 'Закрити',
   'work.highlight': 'А ви знали?',
+  'work.projects': 'проєктів',
 
   'skills.eyebrow': 'Інструменти',
   'skills.title': 'З чим я працюю',
@@ -198,6 +238,7 @@ const uk: Record<UIKey, string> = {
   'skills.tech': 'Фреймворки й бібліотеки',
   'skills.tools': 'Дані й інструменти',
   'skills.spoken': 'Розмовляю',
+  'skills.count': 'інструментів',
 
   'contact.eyebrow': 'Контакти',
   'contact.title': 'Створімо щось разом',
@@ -206,8 +247,9 @@ const uk: Record<UIKey, string> = {
   'contact.copied': 'Email скопійовано',
   'contact.cv': 'Завантажити CV',
 
-  'footer.built': 'Зроблено на Astro, GSAP, Lenis та OGL.',
+  'footer.built': 'Намальовано від руки на Astro, GSAP та Lenis.',
   'footer.top': 'Нагору',
+  'footer.thanks': 'Дякую, що догортали до кінця. Гарного дня!',
 };
 
 export const ui: Record<Lang, Record<UIKey, string>> = { en, sv, uk };

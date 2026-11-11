@@ -1,40 +1,125 @@
 ---
 import { useT, type Lang } from '../../i18n';
+import { profile } from '../../data/profile';
+import Star from '../sketch/Star.astro';
+import StickStation from '../sketch/StickStation.astro';
 
 interface Props {
   lang: Lang;
 }
 const { lang } = Astro.props;
 const t = useT(lang);
+const [first, last] = profile.name.split(' ');
 ---
 
-<section class="intro section" id="intro" tabindex="-1" data-scene="0" aria-labelledby="intro-label">
+<section class="intro section" id="intro" tabindex="-1" aria-labelledby="intro-label" data-frame-label={t('intro.eyebrow')}>
+  <StickStation pose="point" class="lane-station" />
   <div class="container intro__inner">
-    <p class="eyebrow" id="intro-label" data-reveal>{t('intro.eyebrow')}</p>
-    <p class="intro__text" data-intro-text>{t('intro.text')}</p>
+    <!-- Звёздочка едет по линии, пока читаешь абзац -->
+    <div class="intro__rail" aria-hidden="true" data-intro-rail>
+      <svg class="intro__line" viewBox="0 0 10 400" preserveAspectRatio="none" data-draw>
+        <path pathLength="1" d="M5 2c-1.5 60 1.6 130 .2 200S4 330 5.4 398"></path>
+      </svg>
+      <span class="intro__star" data-intro-star><Star variant="both" /></span>
+    </div>
+
+    <div class="intro__body">
+      <p class="eyebrow" id="intro-label" data-reveal>{t('intro.eyebrow')}</p>
+      <p class="intro__text" data-intro-text data-perch="point" data-perch-at="0.97" data-perch-face="left">{t('intro.text')}</p>
+      <p class="intro__sign" data-reveal aria-label={profile.name}>
+        <span class="tag">{first}</span>
+        <span class="tag tag--line" style="--tag-tilt: 1deg">{last}</span>
+        <Star class="intro__sign-star" />
+      </p>
+    </div>
   </div>
 </section>
 
 <style>
   .intro {
     outline: none;
+    --station-top: calc(var(--section-space) + 3rem);
   }
 
   .intro__inner {
     display: grid;
-    gap: 2rem;
-    max-width: 1100px;
+    grid-template-columns: 2.4rem minmax(0, 1fr);
+    gap: clamp(1rem, 3vw, 2.6rem);
+    max-width: 68.75rem;
+  }
+
+  .intro__body {
+    display: grid;
+    gap: 1.6rem;
   }
 
   .intro__text {
-    font-family: var(--font-display);
+    font-family: var(--font-hand);
     font-size: var(--step-3);
-    line-height: 1.15;
+    font-weight: 500;
+    line-height: 1.12;
     text-wrap: pretty;
   }
 
   .intro__text :global(.split-mask) {
     overflow: visible;
+  }
+
+  .intro__sign {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    justify-self: end;
+    margin-top: 0.4rem;
+  }
+  .intro__sign :global(.intro__sign-star) {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-left: 0.3rem;
+    color: var(--color-accent);
+  }
+
+  /* --- Рельса со звёздочкой --- */
+  .intro__rail {
+    position: relative;
+    margin-top: 3.2rem;
+  }
+  .intro__line {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 10px;
+    height: 100%;
+    translate: -50% 0;
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-line);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+  }
+  .intro__star {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 1.7rem;
+    margin: -0.85rem 0 0 -0.85rem;
+    color: var(--color-text);
+    --star-fill: var(--color-accent);
+    --star-stroke: 4;
+    will-change: transform;
+  }
+  .intro__star :global(svg) {
+    width: 100%;
+    height: auto;
+  }
+
+  @media (max-width: 699px) {
+    .intro__inner {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .intro__rail {
+      display: none;
+    }
   }
 </style>
 
@@ -43,19 +128,24 @@ const t = useT(lang);
   import { splitText } from '../../lib/split';
 
   const el = document.querySelector<HTMLElement>('[data-intro-text]');
+  const rail = document.querySelector<HTMLElement>('[data-intro-rail]');
+  const star = document.querySelector<HTMLElement>('[data-intro-star]');
 
   if (el && !reducedMotion.matches) {
     const words = splitText(el, 'words');
-    // Слова «проявляются» вслед за скроллом
-    gsap.fromTo(
-      words,
-      { opacity: 0.14 },
-      {
-        opacity: 1,
-        ease: 'none',
-        stagger: 0.1,
-        scrollTrigger: { trigger: el, start: 'top 80%', end: 'bottom 45%', scrub: 0.6 },
-      },
-    );
+    const scrollTrigger = { trigger: el, start: 'top 80%', end: 'bottom 45%', scrub: 0.6 };
+    // Слова «проявляются» вслед за скроллом, будто их дописывают
+    gsap.fromTo(words, { opacity: 0.12, y: 6 }, { opacity: 1, y: 0, ease: 'none', stagger: 0.1, scrollTrigger });
+    // Звёздочка катится по рельсе синхронно с текстом
+    if (rail && star) {
+      gsap.fromTo(
+        star,
+        { y: 0, rotate: 0 },
+        { y: () => rail.offsetHeight, rotate: 360, ease: 'none', scrollTrigger: { ...scrollTrigger, invalidateOnRefresh: true } },
+      );
+      rail.classList.add('is-in');
+    }
+  } else {
+    rail?.classList.add('is-in');
   }
 </script>

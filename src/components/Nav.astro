@@ -17,7 +17,7 @@ const links = [
 
 <header class="nav" data-nav>
   <div class="nav__bar">
-    <a class="nav__logo" href="#top" aria-label={t('nav.home')} data-scroll-link>
+    <a class="nav__logo sketch" href="#top" aria-label={t('nav.home')} data-scroll-link>
       <span class="nav__mono">IM</span>
     </a>
 
@@ -29,6 +29,9 @@ const links = [
               <a href={`#${l.id}`} data-scroll-link data-nav-link={l.id}>
                 <span class="nav__num">0{i + 1}</span>
                 {l.label}
+                <svg class="nav__squiggle" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+                  <path pathLength="1" d="M2 6c10-5 18 3 28 0s18-5 28-1 20 3 30-1 8-2 10-1"></path>
+                </svg>
               </a>
             </li>
           ))
@@ -40,7 +43,14 @@ const links = [
       <div class="nav__langs" role="group" aria-label={t('lang.label')}>
         {
           (Object.keys(languages) as Lang[]).map((l) => (
-            <a href={pathFor(l)} hreflang={l} lang={l} aria-current={l === lang ? 'true' : undefined}>
+            <a
+              href={pathFor(l)}
+              hreflang={l}
+              lang={l}
+              aria-current={l === lang ? 'true' : undefined}
+              data-lang-link
+              data-astro-prefetch="hover"
+            >
               {l.toUpperCase()}
             </a>
           ))
@@ -50,15 +60,14 @@ const links = [
       <button
         class="nav__icon"
         type="button"
-        data-orbs-toggle
+        data-still-toggle
         aria-pressed="false"
         data-label-pause={t('bg.pause')}
         data-label-play={t('bg.play')}
         aria-label={t('bg.pause')}
-        hidden
       >
-        <svg viewBox="0 0 20 20" width="18" height="18" class="i-pause"><path d="M6 4h2.5v12H6zM11.5 4H14v12h-2.5z" fill="currentColor"></path></svg>
-        <svg viewBox="0 0 20 20" width="18" height="18" class="i-play"><path d="M6 4l10 6-10 6z" fill="currentColor"></path></svg>
+        <svg viewBox="0 0 20 20" width="20" height="20" class="i-pause" aria-hidden="true"><path d="M7 4.5c.2 3.6-.2 7.4.3 11M13 4c-.3 4 .3 7.6-.2 11.5"></path></svg>
+        <svg viewBox="0 0 20 20" width="20" height="20" class="i-play" aria-hidden="true"><path d="M6.5 4.2c-.3 4 .2 8 .1 11.6 3-1.8 6.4-3.6 8.6-5.9-2.6-1.9-5.6-3.8-8.7-5.7z"></path></svg>
       </button>
 
       <button
@@ -69,15 +78,11 @@ const links = [
         data-day={t('theme.day')}
         data-night={t('theme.night')}
       >
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-          <mask id="moon-mask">
-            <rect width="24" height="24" fill="white"></rect>
-            <circle class="theme__cut" cx="24" cy="4" r="7" fill="black"></circle>
-          </mask>
-          <circle class="theme__core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#moon-mask)"></circle>
-          <g class="theme__rays" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-            <path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path>
-          </g>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <!-- солнце: кружок от руки + лучи; луна: серп -->
+          <path class="theme__sun" d="M16.6 11.2c.4 2.9-1.8 5.4-4.7 5.5-2.8.1-4.9-2-4.8-4.7.1-2.6 2.2-4.7 4.8-4.6 2.4.1 4.4 1.8 4.9 4.3"></path>
+          <path class="theme__rays" d="M12 1.8v2.6M12.2 19.8v2.5M1.8 12.1h2.6M19.7 11.9h2.5M4.8 4.6l1.7 1.9M17.4 17.5l1.9 1.8M4.6 19.3l1.9-1.7M17.6 6.5l1.7-1.9"></path>
+          <path class="theme__moon" d="M15.8 3.6c-4.9.3-8.6 4.3-8.2 9.1.4 4.4 4.3 7.8 8.9 7.4-5.6 2.7-12-1.4-12.1-7.8-.1-5.8 5.6-10.2 11.4-8.7z"></path>
         </svg>
       </button>
 
@@ -123,7 +128,7 @@ const links = [
   }
 
   .nav.is-hidden:not(.is-open) {
-    transform: translateY(-110%);
+    transform: translateY(-130%);
   }
 
   .nav__bar {
@@ -131,25 +136,30 @@ const links = [
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    padding: 0.9rem var(--gutter);
+    padding: 0.8rem var(--gutter) 0.9rem;
     position: relative;
     z-index: 2;
   }
 
-  /* мягкая подложка, когда страница прокручена */
+  /* полоска бумаги с рваным нижним краем, когда страница прокручена */
   .nav__bar::before {
     content: '';
     position: absolute;
-    inset: 0;
-    background: var(--color-veil);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    inset: 0 0 -10px;
+    background: var(--color-surface);
+    box-shadow: 0 6px 14px -10px var(--color-shadow);
+    clip-path: polygon(
+      0 0, 100% 0, 100% 86%, 96% 92%, 91% 85%, 85% 93%, 79% 87%, 72% 94%, 66% 86%, 59% 92%,
+      53% 85%, 46% 93%, 40% 86%, 33% 92%, 27% 85%, 20% 93%, 14% 86%, 8% 92%, 3% 86%, 0 91%
+    );
     opacity: 0;
-    transition: opacity 0.4s;
+    translate: 0 -12px;
+    transition: opacity 0.35s, translate 0.45s var(--ease-out);
     z-index: -1;
   }
   .nav.is-scrolled .nav__bar::before {
     opacity: 1;
+    translate: 0 0;
   }
   .nav.is-open .nav__bar::before {
     opacity: 0;
@@ -158,18 +168,21 @@ const links = [
   .nav__logo {
     display: grid;
     place-items: center;
-    width: 2.6rem;
-    height: 2.6rem;
-    border: 1px solid var(--color-line);
-    border-radius: 50%;
-    font-family: var(--font-display);
-    font-size: 1.1rem;
-    font-style: italic;
-    transition: background 0.3s, color 0.3s;
+    width: 3rem;
+    height: 3rem;
+    font-family: var(--font-hand);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    rotate: -6deg;
+    transition: rotate 0.5s var(--ease-back);
+  }
+  .nav__logo::before {
+    border-radius: 52% 48% 46% 54% / 55% 45% 55% 45%;
+    animation-name: boil-round;
   }
   .nav__logo:hover {
-    background: var(--color-text);
-    color: var(--color-bg);
+    rotate: 8deg;
   }
 
   .nav__links ul {
@@ -181,76 +194,99 @@ const links = [
     position: relative;
     display: inline-flex;
     align-items: baseline;
-    gap: 0.4em;
-    font-size: var(--step--1);
-    letter-spacing: 0.06em;
-    padding-block: 0.3rem;
+    gap: 0.35em;
+    font-family: var(--font-hand);
+    font-size: 1.45rem;
+    font-weight: 600;
+    line-height: 1.1;
+    padding-block: 0.2rem 0.4rem;
   }
 
-  .nav__links a::after {
-    content: '';
+  .nav__squiggle {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 1px;
-    background: currentColor;
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 0.5s var(--ease-out);
+    left: -2%;
+    right: -2%;
+    bottom: -0.1rem;
+    width: 104%;
+    height: 0.5rem;
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2.5;
+    stroke-linecap: round;
   }
-  .nav__links a:hover::after,
-  .nav__links a.is-active::after {
-    transform: scaleX(1);
-    transform-origin: left;
+  .nav__squiggle path {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 1.01;
+    transition: stroke-dashoffset 0.45s var(--ease-out);
+  }
+  .nav__links a:hover .nav__squiggle path,
+  .nav__links a.is-active .nav__squiggle path {
+    stroke-dashoffset: 0;
   }
 
   .nav__num {
-    font-size: 0.7em;
-    color: var(--color-muted);
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-accent);
     font-variant-numeric: tabular-nums;
+    translate: 0 -0.5em;
   }
 
   .nav__tools {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.3rem;
   }
 
   .nav__langs {
     display: flex;
-    gap: 0.1rem;
-    margin-right: 0.4rem;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
+    gap: 0.15rem;
+    margin-right: 0.3rem;
+    font-family: var(--font-hand);
+    font-size: 1.25rem;
+    font-weight: 600;
   }
   .nav__langs a {
-    padding: 0.35rem 0.45rem;
-    border-radius: 999px;
+    position: relative;
+    padding: 0.1rem 0.45rem 0.2rem;
     color: var(--color-muted);
-    transition: color 0.2s, background 0.2s;
+    transition: color 0.2s;
   }
   .nav__langs a:hover {
     color: var(--color-text);
   }
+  /* текущий язык обведён от руки */
   .nav__langs a[aria-current] {
-    color: var(--color-bg);
-    background: var(--color-text);
+    color: var(--color-text);
+  }
+  .nav__langs a[aria-current]::before {
+    content: '';
+    position: absolute;
+    inset: 0 -0.05rem;
+    border: 2px solid var(--color-accent);
+    border-radius: 50% 45% 55% 48% / 55% 50% 48% 45%;
+    rotate: -6deg;
   }
 
   .nav__icon {
     display: grid;
     place-items: center;
-    width: 2.4rem;
-    height: 2.4rem;
+    width: 2.6rem;
+    height: 2.6rem;
     border-radius: 50%;
-    transition: background 0.2s;
+    transition: rotate 0.5s var(--ease-back);
   }
   .nav__icon:hover {
-    background: var(--color-line);
+    rotate: -12deg;
   }
-  .nav__icon[hidden] {
-    display: none;
+  .nav__icon svg {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .i-play {
@@ -264,21 +300,26 @@ const links = [
   }
 
   /* Солнце ↔ луна */
-  .theme__core,
-  .theme__cut,
-  .theme__rays {
-    transition: transform 0.6s var(--ease-out), opacity 0.4s;
+  .theme__sun,
+  .theme__rays,
+  .theme__moon {
+    transition:
+      transform 0.6s var(--ease-back),
+      opacity 0.35s;
     transform-origin: 12px 12px;
   }
-  :global([data-theme='night']) .theme__core {
-    transform: scale(1.5);
+  .theme__moon {
+    opacity: 0;
+    transform: rotate(-60deg) scale(0.5);
   }
-  :global([data-theme='night']) .theme__cut {
-    transform: translate(-9px, 5px);
-  }
+  :global([data-theme='night']) .theme__sun,
   :global([data-theme='night']) .theme__rays {
     opacity: 0;
-    transform: rotate(-45deg) scale(0.6);
+    transform: rotate(60deg) scale(0.5);
+  }
+  :global([data-theme='night']) .theme__moon {
+    opacity: 1;
+    transform: none;
   }
 
   /* --- Мобильное меню --- */
@@ -286,26 +327,36 @@ const links = [
     display: none;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.5rem 0.4rem 0.5rem 0.8rem;
-    font-size: var(--step--1);
-    letter-spacing: 0.08em;
+    padding: 0.4rem 0.4rem 0.4rem 0.8rem;
+    font-family: var(--font-hand);
+    font-size: 1.4rem;
+    font-weight: 600;
   }
 
   .nav__burger {
     display: grid;
-    gap: 5px;
-    width: 22px;
+    gap: 6px;
+    width: 24px;
   }
   .nav__burger span {
-    height: 1.5px;
+    height: 2px;
+    border-radius: 2px;
     background: currentColor;
     transition: transform 0.4s var(--ease-out);
   }
+  .nav__burger span:first-child {
+    rotate: -3deg;
+  }
+  .nav__burger span:last-child {
+    rotate: 2deg;
+    width: 80%;
+  }
   .nav.is-open .nav__burger span:first-child {
-    transform: translateY(3.25px) rotate(45deg);
+    transform: translateY(4px) rotate(45deg);
   }
   .nav.is-open .nav__burger span:last-child {
-    transform: translateY(-3.25px) rotate(-45deg);
+    transform: translateY(-4px) rotate(-45deg);
+    width: 100%;
   }
 
   .mmenu {
@@ -333,14 +384,21 @@ const links = [
     display: flex;
     align-items: baseline;
     gap: 0.8rem;
-    font-family: var(--font-display);
+    font-family: var(--font-hand);
+    font-weight: 700;
     font-size: var(--step-4);
-    line-height: 1.1;
+    line-height: 1.05;
+  }
+  .mmenu .nav__squiggle {
+    display: none;
   }
   .mmenu li {
     opacity: 0;
-    transform: translateY(1.5rem);
-    transition: opacity 0.5s, transform 0.6s var(--ease-out);
+    transform: translateY(1.5rem) rotate(2deg);
+    transition: opacity 0.5s, transform 0.6s var(--ease-back);
+  }
+  .mmenu li:nth-child(even) a {
+    padding-left: 1.5rem;
   }
   .nav.is-open .mmenu li {
     opacity: 1;
@@ -366,12 +424,34 @@ const links = [
     .nav__menu-text {
       display: none;
     }
+    .nav__icon {
+      width: 2.2rem;
+    }
+  }
+
+  /* Самые узкие телефоны (320–360): всё в одну строку без касаний */
+  @media (max-width: 360px) {
+    .nav__bar {
+      gap: 0.5rem;
+    }
+    .nav__logo {
+      width: 2.5rem;
+      height: 2.5rem;
+      font-size: 1.25rem;
+    }
+    .nav__langs a {
+      padding-inline: 0.3rem;
+    }
+    .nav__icon {
+      width: 1.9rem;
+    }
   }
 </style>
 
 <script>
   import { lockScroll, scrollToTarget } from '../lib/motion';
   import { getTheme, setTheme } from '../lib/theme';
+  import { rememberSpot } from '../lib/relang';
 
   const nav = document.querySelector<HTMLElement>('[data-nav]')!;
   const menu = nav.querySelector<HTMLElement>('[data-menu]')!;
@@ -392,6 +472,18 @@ const links = [
     // переводим фокус в секцию для клавиатуры и скринридеров
     if (target instanceof HTMLElement) target.focus({ preventScroll: true });
   });
+
+  /* ---------- Смена языка: запомнить место, новая страница встанет туда же ---------- */
+  nav.querySelectorAll<HTMLAnchorElement>('[data-lang-link]').forEach((a) =>
+    a.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return; // новая вкладка
+      if (a.hasAttribute('aria-current')) {
+        e.preventDefault(); // уже этот язык — не перезагружаем
+        return;
+      }
+      rememberSpot();
+    }),
+  );
 
   /* ---------- Спрятать при скролле вниз, показать при скролле вверх ---------- */
   let lastY = window.scrollY;
@@ -446,14 +538,22 @@ const links = [
     syncThemeLabel();
   });
 
-  /* ---------- Пауза WebGL-фона ---------- */
-  const orbsBtn = nav.querySelector<HTMLButtonElement>('[data-orbs-toggle]')!;
-  orbsBtn.addEventListener('click', () => window.dispatchEvent(new CustomEvent('orbs:toggle')));
-  window.addEventListener('orbs:state', (e) => {
-    const paused = (e as CustomEvent<{ paused: boolean }>).detail.paused;
-    orbsBtn.hidden = false;
-    orbsBtn.setAttribute('aria-pressed', String(paused));
-    orbsBtn.setAttribute('aria-label', (paused ? orbsBtn.dataset.labelPlay : orbsBtn.dataset.labelPause) ?? '');
+  /* ---------- Пауза «каракулей»: boil, живые позы стикмена ---------- */
+  const stillBtn = nav.querySelector<HTMLButtonElement>('[data-still-toggle]')!;
+  const syncStill = () => {
+    const still = document.documentElement.classList.contains('is-still');
+    stillBtn.setAttribute('aria-pressed', String(still));
+    stillBtn.setAttribute('aria-label', (still ? stillBtn.dataset.labelPlay : stillBtn.dataset.labelPause) ?? '');
+  };
+  syncStill();
+  stillBtn.addEventListener('click', () => {
+    const still = document.documentElement.classList.toggle('is-still');
+    try {
+      localStorage.setItem('still', still ? '1' : '0');
+    } catch {
+      /* приватный режим — просто не запоминаем */
+    }
+    syncStill();
   });
 
   /* ---------- Мобильное меню ---------- */

@@ -1,0 +1,24 @@
+---
+/**
+ * SVG-фильтр «от руки» для статичных фигур стикмена (StickStation).
+ * Подключается один раз в Base.astro. Важно: displacement-фильтры дорогие,
+ * поэтому их нельзя вешать на то, что перерисовывается (ховеры, аккордеоны,
+ * анимации, большие площади). Для рамок и линий есть дешёвые замены в base.css.
+ */
+---
+
+<svg class="sketch-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <filter id="rough-stick" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="4" result="n" />
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+  </filter>
+</svg>
+
+<style>
+  .sketch-defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+</style>

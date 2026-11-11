@@ -1,14 +1,20 @@
 ---
-/** Короткая заставка: показывается один раз за сессию, ≤ 1.2 с. */
+/** Короткая заставка: имя обводится маркером, вспыхивает звёздочка, лист уезжает вверх. Раз за сессию, ≤ 1.5 с. */
+import Star from './sketch/Star.astro';
 ---
 
 <div class="preloader" data-preloader aria-hidden="true">
   <div class="preloader__inner">
-    <svg class="preloader__star" viewBox="0 0 40 40" width="40" height="40">
-      <path d="M20 0 C21 13 27 19 40 20 C27 21 21 27 20 40 C19 27 13 21 0 20 C13 19 19 13 20 0Z" fill="currentColor"></path>
+    <p class="preloader__name">Illia</p>
+    <svg class="preloader__circle" viewBox="0 0 220 110" preserveAspectRatio="none">
+      <path
+        data-loop
+        pathLength="1"
+        d="M150 14C110 2 34 8 16 42c-16 30 26 56 92 58 64 2 104-16 100-48C204 20 150 8 92 14"
+      ></path>
     </svg>
-    <p class="preloader__name">Illia Makovetskyi</p>
     <p class="preloader__count"><span data-count>0</span>%</p>
+    <span class="preloader__star" data-pre-star><Star variant="both" /></span>
   </div>
 </div>
 
@@ -21,7 +27,6 @@
     place-items: center;
     background: var(--color-bg);
     color: var(--color-text);
-    clip-path: inset(0 0 0 0);
   }
 
   :global(.no-preloader) .preloader {
@@ -29,33 +34,56 @@
   }
 
   .preloader__inner {
+    position: relative;
     display: grid;
     justify-items: center;
-    gap: 1rem;
-  }
-
-  .preloader__star {
-    color: var(--color-accent);
-    animation: spin 2.4s linear infinite;
+    gap: 0.6rem;
   }
 
   .preloader__name {
-    font-family: var(--font-display);
-    font-size: var(--step-2);
-    font-style: italic;
+    font-family: var(--font-hand);
+    font-size: var(--step-4);
+    font-weight: 700;
+    line-height: 1;
+    padding: 1.4rem 3rem;
+  }
+
+  .preloader__circle {
+    position: absolute;
+    inset: -0.2rem -0.5rem auto;
+    height: calc(100% - 1.6rem);
+    width: calc(100% + 1rem);
+    overflow: visible;
+    fill: none;
+    stroke: var(--color-accent);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+  .preloader__circle path {
+    stroke-dasharray: 1 2;
+    stroke-dashoffset: 1.01;
+  }
+
+  .preloader__star {
+    position: absolute;
+    right: 0.4rem;
+    top: -0.6rem;
+    width: 3rem;
+    color: var(--color-text);
+    --star-fill: var(--color-accent);
+    --star-stroke: 3;
+    opacity: 0;
+  }
+  .preloader__star :global(svg) {
+    width: 100%;
+    height: auto;
   }
 
   .preloader__count {
-    font-size: var(--step--1);
-    letter-spacing: 0.2em;
+    font-family: var(--font-hand);
+    font-size: var(--step-1);
     color: var(--color-muted);
     font-variant-numeric: tabular-nums;
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 </style>
 
@@ -74,20 +102,25 @@
       sessionStorage.setItem('preloader-seen', '1');
     } catch {}
     const count = el.querySelector<HTMLElement>('[data-count]')!;
+    const loop = el.querySelector<SVGPathElement>('[data-loop]')!;
     const state = { n: 0 };
     gsap
-      .timeline({
-        onComplete: () => {
-          el.remove();
-        },
-      })
+      .timeline({ onComplete: () => el.remove() })
       .to(state, {
         n: 100,
         duration: 0.9,
         ease: 'power2.inOut',
-        onUpdate: () => (count.textContent = String(Math.round(state.n))),
+        onUpdate: () => {
+          count.textContent = String(Math.round(state.n));
+          loop.style.strokeDashoffset = String(1.01 * (1 - state.n / 100));
+        },
       })
+      .fromTo(
+        el.querySelector('[data-pre-star]'),
+        { opacity: 0, scale: 0.2, rotate: -140 },
+        { opacity: 1, scale: 1, rotate: 0, duration: 0.45, ease: 'back.out(2.5)' },
+      )
       .add(releaseIntro, '-=0.05')
-      .to(el, { clipPath: 'inset(0 0 100% 0)', duration: 0.7, ease: 'power3.inOut' }, '<');
+      .to(el, { yPercent: -102, rotate: -2, duration: 0.7, ease: 'power3.inOut' }, '<');
   }
 </script>

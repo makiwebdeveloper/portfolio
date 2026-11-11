@@ -9,22 +9,28 @@
 }
 
 html {
+  /* До 1600px — 16px (или пользовательский размер). Шире — плавно растёт
+     до 22px на 2560: вся вёрстка в rem и масштабируется пропорционально,
+     а не теряется посреди огромного экрана. */
+  font-size: clamp(100%, 4px + 0.75vw, 137.5%);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background: var(--color-bg);
 }
 
 body {
+  position: relative;
   min-height: 100svh;
-  /* Фон только на <html>: иначе WebGL-слой с z-index:-1 окажется под фоном body */
+  /* Фон только на <html>: слои линии/стикмена лежат поверх, но под контентом */
   background: transparent;
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: var(--step-0);
   line-height: 1.6;
-  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
+  /* Поля тетради слева (0 на мобильных) */
+  padding-left: var(--lane);
 }
 
 img,
@@ -64,10 +70,10 @@ ol[role='list'] {
 h1,
 h2,
 h3 {
-  font-family: var(--font-display);
-  font-weight: 400;
-  line-height: 1.02;
-  letter-spacing: -0.01em;
+  font-family: var(--font-hand);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: 0;
   text-wrap: balance;
 }
 
@@ -80,9 +86,41 @@ p {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-  border-radius: 4px;
+  outline: 2px dashed var(--color-accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* ---------- Лист тетради: поля, зерно ---------- */
+
+/* Красная линия полей. Фиксированная, поэтому не зависит от высоты страницы. */
+.page-margin {
+  position: fixed;
+  inset: 0 auto 0 calc(var(--lane) - 14px);
+  width: 6px;
+  border-inline: 1.5px solid var(--color-margin);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: -1;
+  display: none;
+}
+@media (min-width: 900px) {
+  .page-margin {
+    display: block;
+  }
+}
+
+/* Зерно бумаги поверх всего: статичный SVG-шум, без JS */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  pointer-events: none;
+  background-image: var(--grain-image);
+  opacity: var(--grain-opacity);
+  /* Без mix-blend-mode: с ним браузер пересчитывает наложение при каждом
+     сдвиге контента, и скролл тормозит. Точки шума уже с альфой. */
+  transform: translateZ(0);
 }
 
 /* ---------- Helpers ---------- */
@@ -96,21 +134,96 @@ p {
   padding-block: var(--section-space);
 }
 
+.hand {
+  font-family: var(--font-hand);
+}
+
+/* Подпись над заголовком: рукописная, со стрелкой-закорючкой */
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 0.6em;
-  font-size: var(--step--1);
-  letter-spacing: 0.18em;
+  gap: 0.4em;
+  font-family: var(--font-hand);
+  font-size: var(--step-1);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-accent);
+  rotate: -2deg;
+  transform-origin: left center;
+}
+
+.eyebrow::after {
+  content: '';
+  width: 2.2em;
+  height: 1em;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 30' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 8c10 2 18 10 22 6s-6-10-9-3 8 14 20 14c6 0 12-2 17-5'/%3E%3Cpath d='M46 12l8 8-10 3'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  translate: 0 0.3em;
+}
+
+/* Мелкая подпись капсом моноширинным — второй «голос» страницы рядом с
+   крупным рукописным. Пример: (06 PROJECTS · 2023—2026). */
+.micro {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-muted);
 }
 
-.eyebrow::before {
+/* Лента с этикет-принтера: инверсный блок, капс, наклеен чуть криво */
+.tag {
+  display: inline-block;
+  padding: 0.2em 0.55em 0.25em;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-bg);
+  background: var(--color-text);
+  border-radius: 2px;
+  rotate: var(--tag-tilt, -1.2deg);
+  box-shadow: 1px 1.5px 0 var(--color-shadow);
+}
+.tag--accent {
+  background: var(--color-accent);
+}
+.tag--line {
+  color: var(--color-text);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+/* Метка обреза «+», как на печатном листе */
+.crop {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  color: var(--color-line);
+}
+.crop::before,
+.crop::after {
   content: '';
-  width: 2.2em;
-  height: 1px;
+  position: absolute;
   background: currentColor;
+}
+.crop::before {
+  left: 6px;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+}
+.crop::after {
+  top: 6px;
+  left: 0;
+  height: 1.5px;
+  width: 100%;
 }
 
 .visually-hidden {
@@ -133,7 +246,7 @@ p {
   padding: 0.6em 1em;
   background: var(--color-text);
   color: var(--color-bg);
-  border-radius: 999px;
+  border-radius: var(--wobble);
   transform: translateY(-200%);
   transition: transform var(--dur-fast) var(--ease-out);
 }
@@ -142,25 +255,281 @@ p {
   transform: none;
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5em;
-  padding: 0.7em 1.3em;
-  border: 1px solid var(--color-line);
-  border-radius: 999px;
-  font-size: var(--step--1);
-  letter-spacing: 0.04em;
-  transition:
-    background var(--dur-fast),
-    color var(--dur-fast),
-    border-color var(--dur-fast);
+/* =========================================================================
+   Рисованные примитивы
+   ========================================================================= */
+
+/* Рамка «маркером» на ::before. Без SVG-фильтров: они дорогие (каждая
+   перерисовка гоняет displacement на GPU). «Кипение» (boil) — смена трёх
+   неровных форм скругления 2–3 раза в секунду: это крошечная перерисовка. */
+.sketch,
+.btn {
+  position: relative;
+  isolation: isolate;
+}
+.sketch::before,
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: var(--stroke) solid currentColor;
+  border-radius: var(--wobble);
+  animation: boil var(--boil) steps(1) infinite;
+  pointer-events: none;
 }
 
-.pill:hover {
-  background: var(--color-text);
+@keyframes boil {
+  0% {
+    border-radius: 255px 18px 225px 16px / 16px 225px 18px 255px;
+    rotate: 0deg;
+  }
+  33% {
+    border-radius: 20px 235px 18px 245px / 228px 15px 238px 19px;
+    rotate: 0.4deg;
+  }
+  66% {
+    border-radius: 238px 22px 252px 14px / 21px 242px 15px 232px;
+    rotate: -0.3deg;
+  }
+}
+
+/* То же для круглых рамок (логотип и т.п.) */
+@keyframes boil-round {
+  0% {
+    border-radius: 52% 48% 46% 54% / 55% 45% 55% 45%;
+    rotate: 0deg;
+  }
+  33% {
+    border-radius: 47% 53% 52% 48% / 49% 54% 46% 51%;
+    rotate: 2deg;
+  }
+  66% {
+    border-radius: 55% 45% 49% 51% / 46% 52% 48% 54%;
+    rotate: -1.5deg;
+  }
+}
+
+/* Кнопка/ссылка-«пилюля», нарисованная от руки */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.45em 1.15em 0.5em;
+  font-family: var(--font-hand);
+  font-size: var(--step-1);
+  font-weight: 600;
+  line-height: 1.1;
+  transition:
+    rotate 0.4s var(--ease-back),
+    translate 0.4s var(--ease-back),
+    color 0.2s;
+}
+.btn::after {
+  /* штриховка, которая «закрашивает» кнопку при наведении */
+  content: '';
+  position: absolute;
+  inset: 4px;
+  z-index: -2;
+  border-radius: var(--wobble);
+  background: repeating-linear-gradient(
+    -38deg,
+    color-mix(in oklch, var(--color-accent) 55%, transparent) 0 2px,
+    transparent 2px 7px
+  );
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.45s var(--ease-out);
+}
+.btn:hover {
+  rotate: -1.5deg;
+  translate: 0 -2px;
+}
+.btn:hover::after,
+.btn:focus-visible::after {
+  clip-path: inset(0 0 0 0);
+}
+.btn--solid {
   color: var(--color-bg);
-  border-color: var(--color-text);
+}
+.btn--solid::before {
+  background: var(--color-text);
+}
+.btn--solid::after {
+  display: none;
+}
+
+/* Вырезанный кусок бумаги с тенью и лёгким наклоном */
+.paper {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--wobble-soft);
+  box-shadow:
+    1px 2px 0 var(--color-shadow),
+    0 14px 28px -16px var(--color-shadow);
+  rotate: var(--tilt, 0deg);
+}
+
+/* Полоска скотча сверху. Ставится классом .taped на .paper */
+.taped::after {
+  content: '';
+  position: absolute;
+  top: -0.8rem;
+  left: calc(50% - 2.8rem);
+  width: 5.6rem;
+  height: 1.6rem;
+  background: var(--color-tape);
+  rotate: var(--tape-tilt, -4deg);
+  /* рваные края скотча */
+  clip-path: polygon(
+    0 8%, 6% 0, 12% 10%, 18% 2%, 82% 0, 88% 9%, 94% 1%, 100% 8%,
+    100% 92%, 94% 100%, 88% 91%, 82% 100%, 18% 98%, 12% 90%, 6% 100%, 0 92%
+  );
+  pointer-events: none;
+}
+
+/* Маркер-выделитель. Проводится слева направо, когда родитель
+   получает .is-in (initReveals) или класс .is-drawn. */
+.mark {
+  background: linear-gradient(
+      100deg,
+      transparent 0.2em,
+      var(--color-highlight) 0.4em,
+      var(--color-highlight) calc(100% - 0.4em),
+      transparent calc(100% - 0.15em)
+    )
+    0 62% / 100% 58% no-repeat;
+  padding-inline: 0.15em;
+  margin-inline: -0.15em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Заголовок с рукописным подчёркиванием (sketch/Underline.astro) */
+.title-u {
+  position: relative;
+  display: inline-block;
+}
+
+/* Волнистая линия «от руки»: статичная маска с нарисованной линией,
+   цвет — из токена. Используется для .rule и линий бегущих строк. */
+:root {
+  --wavy-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='8' viewBox='0 0 420 8'%3E%3Cpath d='M0 4.2C35 2.6 70 5.4 105 4s70-2.6 105-.6 70 2.4 105 .4 70-1.9 105-.2' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.rule {
+  position: relative;
+}
+.rule::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 8px;
+  background: var(--color-line);
+  -webkit-mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
+  mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
+  pointer-events: none;
+}
+
+/* Нарисованная линия-подчёркивание (SVG path c pathLength="1") */
+.scribble {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* без vector-effect: non-scaling-stroke — с ним Chrome рвёт dash-анимацию
+     при растянутом viewBox (pathLength + preserveAspectRatio="none") */
+}
+
+
+/* =========================================================================
+   Стикмен (src/lib/stickman.ts): общие стили статичных станций и бегуна
+   ========================================================================= */
+.stick {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.stick__body,
+.stick__props {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url(#rough-stick);
+}
+.stick__body {
+  stroke: var(--color-text);
+  stroke-width: 2.8;
+}
+.stick__head {
+  fill: var(--color-bg);
+}
+.stick__props {
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+.stick__props .is-fill {
+  fill: var(--color-accent);
+}
+
+.station {
+  width: calc(90px * var(--s, 1));
+  aspect-ratio: 90 / 92;
+  pointer-events: none;
+}
+
+/* Станция в полях тетради (секция начинается сразу за полями).
+   На мобильных полей нет — станция встаёт в поток справа. */
+.lane-station {
+  position: relative;
+  margin: 0 var(--gutter) 0.5rem auto;
+}
+@media (min-width: 900px) {
+  .lane-station {
+    position: absolute;
+    /* секция задаёт высоту через --station-top */
+    top: var(--station-top, var(--section-space));
+    left: calc(var(--lane) * -0.5);
+    translate: -50% 0;
+    margin: 0;
+  }
+}
+
+/* Бегун включён: статичные фигуры прячем. Фигура Hero остаётся в потоке —
+   по ней меряется точка бегуна; станции в полях бегуну не нужны (он живёт на
+   контенте, точки [data-perch]) и на мобильных не должны занимать место. */
+.has-runner .station {
+  visibility: hidden;
+}
+.has-runner .lane-station {
+  display: none;
+}
+
+/* Мобильные/без бегуна: лёгкое «дыхание» станций */
+@media (prefers-reduced-motion: no-preference) {
+  html:not(.has-runner):not(.is-still) .station .stick {
+    animation: breathe 2.6s var(--ease-in-out) infinite alternate;
+    transform-origin: 50% 96%;
+  }
+}
+@keyframes breathe {
+  to {
+    transform: scaleY(1.035) rotate(-1.5deg);
+  }
+}
+
+/* ---------- «Не двигаться»: reduced motion или кнопка паузы ---------- */
+.is-still .sketch::before,
+.is-still .btn::before {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sketch::before,
+  .btn::before {
+    animation: none;
+  }
 }
 
 /* ---------- Lenis ---------- */
