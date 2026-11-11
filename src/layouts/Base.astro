@@ -107,11 +107,12 @@ const canonical = new URL(pathFor(lang), Astro.site);
     <Cursor />
 
     <script>
-      import { initSmoothScroll, initReveals } from '../lib/motion';
+      import { initSmoothScroll, initReveals, initOffscreenPause } from '../lib/motion';
       import { restoreSpot } from '../lib/relang';
 
       initSmoothScroll();
       initReveals();
+      initOffscreenPause();
       restoreSpot();
     </script>
   </body>

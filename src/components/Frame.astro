@@ -182,13 +182,16 @@ import { profile } from '../data/profile';
     show(i);
   };
 
-  // Прогресс скролла: одна CSS-переменная раз в кадр
+  // Прогресс скролла: одна CSS-переменная раз в кадр.
+  // Сначала все чтения (pick меряет секции), потом запись: иначе запись
+  // --p перед замером заставляла браузер пересчитывать стили посреди кадра.
   let ticking = false;
   const update = () => {
     ticking = false;
     const max = document.documentElement.scrollHeight - innerHeight;
-    bar.style.setProperty('--p', String(max > 0 ? Math.min(1, scrollY / max) : 0));
+    const p = String(max > 0 ? Math.min(1, scrollY / max) : 0);
     pick();
+    bar.style.setProperty('--p', p);
   };
   window.addEventListener(
     'scroll',

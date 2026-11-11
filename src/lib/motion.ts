@@ -65,6 +65,19 @@ export function fontsReady(max = 1500) {
   return Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, max))]);
 }
 
+/**
+ * Секции за кадром получают .is-off: их бесконечные CSS-анимации стоят
+ * (правило в motion.css). Вне экрана их всё равно не видно, а браузер
+ * иначе пересчитывает их каждый кадр — заметно на слабых устройствах.
+ */
+export function initOffscreenPause() {
+  if (!('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) e.target.classList.toggle('is-off', !e.isIntersecting);
+  });
+  document.querySelectorAll('main > section, main > footer').forEach((el) => io.observe(el));
+}
+
 /** Появление элементов [data-reveal] при входе в экран (без ScrollTrigger — дешевле). */
 export function initReveals(scope: ParentNode = document) {
   const items = scope.querySelectorAll<HTMLElement>('[data-reveal]:not(.is-in)');

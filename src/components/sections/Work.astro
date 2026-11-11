@@ -473,7 +473,10 @@ const range = `${Math.min(...years)}—${Math.max(...years)}`;
     opacity: 1;
     scale: 1;
   }
-  :global(html.has-cursor) .work__preview {
+  /* .is-near — секция близко (скрипт ниже). Раньше display: grid стоял сразу,
+     и lazy-картинки превью (fixed в углу экрана, opacity 0) браузер считал
+     видимыми: ~300 КБ грузились при открытии страницы, до любого наведения. */
+  :global(html.has-cursor) .work.is-near .work__preview {
     display: grid;
   }
   .work__preview :global(.work__preview-item) {
@@ -554,6 +557,20 @@ const range = `${Math.min(...years)}—${Math.max(...years)}`;
   if (fromHash) setOpen(fromHash, true);
 
   /* ---------- Полароид за курсором ---------- */
+  // Картинки превью начинают грузиться за полтора экрана до секции
+  const work = document.querySelector<HTMLElement>('#work')!;
+  if ('IntersectionObserver' in window) {
+    const near = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        work.classList.add('is-near');
+        near.disconnect();
+      },
+      { rootMargin: '150% 0px' },
+    );
+    near.observe(work);
+  } else work.classList.add('is-near');
+
   const xTo = gsap.quickTo(preview, 'x', { duration: 0.6, ease: 'power3.out' });
   const yTo = gsap.quickTo(preview, 'y', { duration: 0.6, ease: 'power3.out' });
   const rotTo = gsap.quickTo(preview, 'rotate', { duration: 0.8, ease: 'power3.out' });

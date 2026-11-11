@@ -597,6 +597,9 @@ const coil = (() => {
   const track = section.querySelector<HTMLElement>('[data-story-track]')!;
   const year = section.querySelector<HTMLElement>('[data-story-year]')!;
   const circle = section.querySelector<SVGSVGElement>('[data-story-circle]')!;
+  // --circle пишем прямо в path: на контейнере года переменная заставляла бы
+  // каждый кадр пересчитывать стили всех цифр одометра (они под ним)
+  const circlePath = circle.querySelector('path')!;
   const items = Array.from(section.querySelectorAll<HTMLElement>('[data-chapter]'));
   const odos = Array.from(section.querySelectorAll<HTMLElement>('.odo'));
   const railBtns = Array.from(section.querySelectorAll<HTMLButtonElement>('[data-goto]'));
@@ -621,7 +624,7 @@ const coil = (() => {
   const CLOSE = 0.6; // к какой доле главы круг должен быть замкнут
   let tool: 'draw' | 'erase' = 'draw';
   function setInk() {
-    year.style.setProperty('--circle', String(1.01 * (1 - ink.k)));
+    circlePath.style.setProperty('--circle', String(1.01 * (1 - ink.k)));
     circle.dataset.drawK = ink.k.toFixed(4);
   }
   function setTool(dir: 'draw' | 'erase') {

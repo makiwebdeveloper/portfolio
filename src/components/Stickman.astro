@@ -636,7 +636,29 @@ import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
 
   /* ---------------- Отрисовка ---------------- */
 
-  const setPts = (el: SVGElement, p: Pt[]) => el.setAttribute('points', pts(p));
+  /* Запись в DOM только при изменении. Браузер инвалидирует стиль и
+     SVG-раскладку даже на тот же самый атрибут, а рендер идёт каждый кадр:
+     пустой реквизит, стоящая поза, пауза — всё это раньше перерисовывалось впустую.
+     В эти атрибуты и стили пишет только render(), поэтому кэш всегда верен. */
+  const written = new Map<Element, Record<string, string | null>>();
+  function setAttr(el: Element, name: string, v: string | null) {
+    let m = written.get(el);
+    if (!m) written.set(el, (m = {}));
+    if (m[name] === v) return;
+    m[name] = v;
+    if (v === null) el.removeAttribute(name);
+    else el.setAttribute(name, v);
+  }
+  function setStyle(el: HTMLElement | SVGElement, name: 'transform' | 'rotate' | 'opacity', v: string) {
+    let m = written.get(el);
+    if (!m) written.set(el, (m = {}));
+    const k = `style:${name}`;
+    if (m[k] === v) return;
+    m[k] = v;
+    el.style[name] = v;
+  }
+
+  const setPts = (el: SVGElement, p: Pt[]) => setAttr(el, 'points', pts(p));
   let frame = 0;
 
   function drawFig(fig: Figure) {
@@ -645,7 +667,7 @@ import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
     setPts(parts.torso, fig.torso);
     setPts(parts.legF, fig.legF);
     setPts(parts.armF, fig.armF);
-    parts.head.setAttribute('transform', `translate(${fig.head[0].toFixed(1)} ${fig.head[1].toFixed(1)})`);
+    setAttr(parts.head, 'transform', `translate(${fig.head[0].toFixed(1)} ${fig.head[1].toFixed(1)})`);
   }
 
   let lastSY = 0;
@@ -686,12 +708,13 @@ import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
     lastPose = p;
     const fig = figure(p);
 
-    runner.style.transform = `translate3d(${st.x.toFixed(1)}px, ${(st.y + st.hop).toFixed(1)}px, 0) scale(${(st.sx * st.k).toFixed(3)}, ${(st.sy * st.k).toFixed(3)})`;
-    spin.style.rotate = `${st.rot.toFixed(1)}deg`;
-    flip.setAttribute(
+    setStyle(
+      runner,
       'transform',
-      `${st.tilt ? `rotate(${st.tilt.toFixed(1)})` : ''}${st.face < 0 ? ' scale(-1 1)' : ''}`.trim(),
+      `translate3d(${st.x.toFixed(1)}px, ${(st.y + st.hop).toFixed(1)}px, 0) scale(${(st.sx * st.k).toFixed(3)}, ${(st.sy * st.k).toFixed(3)})`,
     );
+    setStyle(spin, 'rotate', `${st.rot.toFixed(1)}deg`);
+    setAttr(flip, 'transform', `${st.tilt ? `rotate(${st.tilt.toFixed(1)})` : ''}${st.face < 0 ? ' scale(-1 1)' : ''}`.trim());
     drawFig(fig);
 
     // реквизит станции (ноутбук, чемодан, мячики…)
@@ -699,13 +722,11 @@ import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
     const props = !showProps ? [] : penMode ? penProps : propsFor(s.name, fig, t);
     propEls.forEach((el, n) => {
       const pr = props[n];
-      el.setAttribute('d', pr?.d ?? '');
-      if (pr?.transform) el.setAttribute('transform', pr.transform);
-      else el.removeAttribute('transform');
-      el.classList.toggle('is-fill', !!pr?.fill);
-      el.classList.toggle('is-fx', !!pr?.fx);
+      setAttr(el, 'd', pr?.d ?? '');
+      setAttr(el, 'transform', pr?.transform || null);
+      setAttr(el, 'class', [pr?.fill && 'is-fill', pr?.fx && 'is-fx'].filter(Boolean).join(' ') || null);
     });
-    propsG.style.opacity = st.propsK.toFixed(2);
+    setStyle(propsG, 'opacity', st.propsK.toFixed(2));
   }
 
   /* ---------------- Прыжок ---------------- */
@@ -1398,7 +1419,59 @@ import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
     return { name, x, y, h: 92 * scale, scale, face, x0, x1 };
   }
 
-  const pathLen = new WeakMap<SVGPathElement, number>();
+  /* Таблица точек пути (в координатах самого SVG). getPointAtLength очень
+     медленный (браузер каждый раз заново проходит кривую), а точку на круге
+     года стикмен спрашивает несколько раз за кадр. Путь статичный: меряем
+     один раз и дальше интерполируем. 256 отрезков на круг: ошибка линейной
+     интерполяции — сотые доли пикселя. Таблица строится в свободное время
+     браузера маленькими порциями (целиком сразу — длинная задача на старте
+     у слабых устройств), а пока не готова, точки берутся по-старому. */
+  const LUT_N = 256;
+  interface PathLut {
+    total: number;
+    xs: Float64Array;
+    ys: Float64Array;
+    n: number; // сколько точек уже посчитано
+  }
+  const pathLut = new WeakMap<SVGPathElement, PathLut>();
+  const whenIdle = (fn: (d?: IdleDeadline) => void) =>
+    'requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 1000 }) : setTimeout(fn, 16);
+  function lutOf(path: SVGPathElement): PathLut {
+    let t = pathLut.get(path);
+    if (t) return t;
+    const lut: PathLut = (t = {
+      total: path.getTotalLength(),
+      xs: new Float64Array(LUT_N + 1),
+      ys: new Float64Array(LUT_N + 1),
+      n: 0,
+    });
+    pathLut.set(path, lut);
+    const step = (d?: IdleDeadline) => {
+      let k = 0;
+      // минимум 8 точек за раз, дальше — пока у браузера есть время (без rIC — 16)
+      while (lut.n <= LUT_N && (k++ < 8 || (d ? d.timeRemaining() > 1 : k <= 16))) {
+        const q = path.getPointAtLength((lut.total * lut.n) / LUT_N);
+        lut.xs[lut.n] = q.x;
+        lut.ys[lut.n] = q.y;
+        lut.n++;
+      }
+      if (lut.n <= LUT_N) whenIdle(step);
+    };
+    whenIdle(step);
+    return t;
+  }
+  /** Точка на расстоянии l вдоль пути (как getPointAtLength, но из таблицы, если она готова). */
+  function pathPoint(path: SVGPathElement, t: PathLut, l: number): Pt {
+    const c = Math.max(0, Math.min(t.total, l));
+    if (t.n <= LUT_N) {
+      const q = path.getPointAtLength(c);
+      return [q.x, q.y];
+    }
+    const f = (c / (t.total || 1)) * LUT_N;
+    const i = Math.min(LUT_N - 1, Math.floor(f));
+    const u = f - i;
+    return [t.xs[i] + (t.xs[i + 1] - t.xs[i]) * u, t.ys[i] + (t.ys[i + 1] - t.ys[i]) * u];
+  }
 
   /**
    * data-perch-edge="path": ведёт кончик линии <path> внутри элемента.
@@ -1410,14 +1483,16 @@ import { HEAD_PATH, PLANE_PATH } from '../lib/stickman';
     const d = el.dataset;
     const path = el.querySelector('path')!;
     const m = el.getScreenCTM();
-    let total = pathLen.get(path);
-    if (total === undefined) pathLen.set(path, (total = path.getTotalLength()));
+    const lut = lutOf(path);
+    const total = lut.total;
     const scale = Number(d.perchScale) || (narrow ? 0.72 : 0.95);
     const erase = d.drawDir === 'erase';
+    const sx = scrollX;
+    const sy = scrollY;
     const at = (l: number): Pt => {
-      const q = path.getPointAtLength(Math.max(0, Math.min(total!, l)));
-      const s = m ? new DOMPoint(q.x, q.y).matrixTransform(m) : q;
-      return [s.x + scrollX, s.y + scrollY];
+      const [qx, qy] = pathPoint(path, lut, l);
+      // матрица экрана вручную: без DOMPoint на каждую точку
+      return m ? [m.a * qx + m.c * qy + m.e + sx, m.b * qx + m.d * qy + m.f + sy] : [qx + sx, qy + sy];
     };
     // видимая часть штриха: dasharray 1 2 со смещением 1.01·(1−k)
     const l = Math.max(0, Math.min(1, 1.01 * (Number(d.drawK) || 0) - 0.01)) * total;
