@@ -15,6 +15,19 @@ export interface Chapter {
 
 export const chapters: Chapter[] = [
   {
+    id: 'first-code',
+    year: '2018',
+    place: { en: 'Self-taught · Python course', sv: 'Självlärd · Pythonkurs', uk: 'Самостійно · Курс Python' },
+    role: { en: 'HTML, CSS · Python basics', sv: 'HTML, CSS · Grunder i Python', uk: 'HTML, CSS · Основи Python' },
+    period: '2018',
+    title: { en: 'First lines of code', sv: 'De första kodraderna', uk: 'Перші рядки коду' },
+    text: {
+      en: 'My first try at programming: a bit of HTML and CSS and my very first website. The same year I took a short Python course and learned the basics of the language.',
+      sv: 'Mitt första försök med programmering: lite HTML och CSS och min allra första webbplats. Samma år gick jag en kort Pythonkurs och lärde mig grunderna i språket.',
+      uk: 'Моя перша спроба програмувати: трохи HTML і CSS та мій найперший сайт. Того ж року я пройшов короткий курс Python і вивчив основи мови.',
+    },
+  },
+  {
     id: 'khpi',
     year: '2020',
     place: { en: 'HCTC NTU “KhPI”', sv: 'HCTC NTU ”KhPI”', uk: 'ХПТК НТУ «ХПІ»' },
@@ -24,11 +37,11 @@ export const chapters: Chapter[] = [
       uk: 'Розробка ПЗ · Фаховий молодший бакалавр',
     },
     period: '09/2020 — 05/2024',
-    title: { en: 'First lines of code', sv: 'De första kodraderna', uk: 'Перші рядки коду' },
+    title: { en: 'Learning the fundamentals', sv: 'Grunderna på riktigt', uk: 'Фундамент' },
     text: {
-      en: 'I started studying software development. HTML, CSS and a lot of curiosity about how things on the screen actually work.',
-      sv: 'Jag började studera mjukvaruutveckling. HTML, CSS och mycket nyfikenhet på hur saker på skärmen faktiskt fungerar.',
-      uk: 'Я почав вивчати розробку програмного забезпечення. HTML, CSS і багато цікавості до того, як насправді працює все на екрані.',
+      en: 'College gave me the theory of software development. We started with C#: core programming principles, classes and OOP. Later came HTML, CSS and JavaScript.',
+      sv: 'På college fick jag teorin bakom mjukvaruutveckling. Vi började med C#: grundläggande programmeringsprinciper, klasser och OOP. Senare kom HTML, CSS och JavaScript.',
+      uk: 'Коледж дав мені теорію розробки програмного забезпечення. Почали з C#: базові принципи програмування, класи та ООП. Пізніше були HTML, CSS і JavaScript.',
     },
   },
   {
@@ -39,9 +52,9 @@ export const chapters: Chapter[] = [
     period: '01/2023 — 06/2023',
     title: { en: 'The first real team', sv: 'Det första riktiga teamet', uk: 'Перша справжня команда' },
     text: {
-      en: 'Responsive UI components, landing page sections and animations in React — under mentorship, on real project milestones, making the interface more consistent.',
-      sv: 'Responsiva UI-komponenter, landningssektioner och animationer i React — med mentor, på riktiga projektmål och med ett mer enhetligt gränssnitt som resultat.',
-      uk: 'Адаптивні UI-компоненти, секції лендингів та анімації на React — з ментором, на реальних етапах проєкту, з більш узгодженим інтерфейсом у результаті.',
+      en: 'Landing pages and simple responsive pages, mostly in HTML, CSS and JavaScript, with a first taste of React. Under mentorship, on real project milestones.',
+      sv: 'Landningssidor och enkla responsiva sidor, mest i HTML, CSS och JavaScript, med en första smak av React. Med mentor, på riktiga projektmål.',
+      uk: 'Лендинги та прості адаптивні сторінки, переважно на HTML, CSS і JavaScript, з першим знайомством з React. З ментором, на реальних етапах проєкту.',
     },
   },
   {
@@ -50,11 +63,11 @@ export const chapters: Chapter[] = [
     place: { en: 'NovaBit · Freelance team', sv: 'NovaBit · Frilansteam', uk: 'NovaBit · Фриланс-команда' },
     role: { en: 'Fullstack Developer', sv: 'Fullstackutvecklare', uk: 'Fullstack-розробник' },
     period: '03/2024 — 12/2025',
-    title: { en: 'Going fullstack', sv: 'Steget till fullstack', uk: 'Перехід у fullstack' },
+    title: { en: 'Learning by building', sv: 'Lära genom att bygga', uk: 'Вчитися, будуючи' },
     text: {
-      en: 'Automotive and e-commerce platforms with vehicle catalogs, admin panels, multilingual support and dynamic SEO. I rewrote a Python backend component in Go for much faster APIs, and built real-time WebSocket multiplayer for a Telegram Mini App.',
-      sv: 'Fordons- och e-handelsplattformar med fordonskataloger, adminpaneler, flerspråkighet och dynamisk SEO. Jag skrev om en backenddel från Python till Go för betydligt snabbare API:er och byggde realtidsmultiplayer med WebSockets för en Telegram Mini App.',
-      uk: 'Автомобільні та e-commerce платформи з каталогами авто, адмінками, багатомовністю й динамічним SEO. Переписав частину бекенду з Python на Go — API стали значно швидшими, — і зробив real-time мультиплеєр на WebSockets для Telegram Mini App.',
+      en: 'My biggest growth stage: client work and self-development at the same time. I went deep into Next.js and backend, building automotive and e-commerce platforms with admin panels, multilingual support and dynamic SEO. I rewrote a Python backend component in Go for much faster APIs and built real-time WebSocket multiplayer for a Telegram Mini App. On the side I tried Svelte and Astro and explored Web3.',
+      sv: 'Min största utvecklingsfas: kunduppdrag och självutveckling på samma gång. Jag gick djupt in i Next.js och backend och byggde fordons- och e-handelsplattformar med adminpaneler, flerspråkighet och dynamisk SEO. Jag skrev om en backenddel från Python till Go för betydligt snabbare API:er och byggde realtidsmultiplayer med WebSockets för en Telegram Mini App. Vid sidan av testade jag Svelte och Astro och utforskade Web3.',
+      uk: 'Мій найбільший етап росту: клієнтські проєкти й саморозвиток водночас. Я глибоко зайшов у Next.js і бекенд, робив автомобільні та e-commerce платформи з адмінками, багатомовністю й динамічним SEO. Переписав частину бекенду з Python на Go — API стали значно швидшими, — і зробив real-time мультиплеєр на WebSockets для Telegram Mini App. Паралельно пробував Svelte та Astro і досліджував Web3.',
     },
   },
   {
