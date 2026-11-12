@@ -8,7 +8,7 @@ export type Lang = keyof typeof languages;
 export const defaultLang: Lang = 'en';
 
 const en = {
-  'meta.title': 'Illia Makovetskyi — Fullstack Developer',
+  'meta.title': 'maki web developer · Illia Makovetskyi — Fullstack Developer',
   'meta.description':
     'Fullstack developer building end-to-end products: e-commerce, AI tools, real-time apps and interactive 3D.',
 
@@ -94,7 +94,7 @@ const en = {
 export type UIKey = keyof typeof en;
 
 const sv: Record<UIKey, string> = {
-  'meta.title': 'Illia Makovetskyi — Fullstackutvecklare',
+  'meta.title': 'maki web developer · Illia Makovetskyi — Fullstackutvecklare',
   'meta.description':
     'Fullstackutvecklare som bygger kompletta produkter: e-handel, AI-verktyg, realtidsappar och interaktiv 3D.',
 
@@ -178,7 +178,7 @@ const sv: Record<UIKey, string> = {
 };
 
 const uk: Record<UIKey, string> = {
-  'meta.title': 'Ілля Маковецький — Fullstack-розробник',
+  'meta.title': 'maki web developer · Ілля Маковецький — Fullstack-розробник',
   'meta.description':
     'Fullstack-розробник: створюю продукти від ідеї до запуску — e-commerce, AI-інструменти, real-time застосунки та інтерактивне 3D.',
 

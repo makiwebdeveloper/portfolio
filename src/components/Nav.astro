@@ -1,5 +1,6 @@
 ---
 import { languages, pathFor, useT, type Lang } from '../i18n';
+import { STAR_FILL } from '../lib/doodles';
 
 interface Props {
   lang: Lang;
@@ -18,7 +19,8 @@ const links = [
 <header class="nav" data-nav>
   <div class="nav__bar">
     <a class="nav__logo sketch" href="#top" aria-label={t('nav.home')} data-scroll-link>
-      <span class="nav__mono">IM</span>
+      <!-- «maki»: у последней «ı» без точки, вместо точки звёздочка -->
+      <span class="nav__mono" aria-hidden="true">mak<span class="nav__i">ı<svg class="nav__star" viewBox="0 0 100 100"><path d={STAR_FILL}></path></svg></span></span>
     </a>
 
     <nav class="nav__links" aria-label={t('nav.label')}>
@@ -165,24 +167,43 @@ const links = [
     opacity: 0;
   }
 
+  /* Логотип: «maki» маркером в овале, красная звёздочка вместо точки */
   .nav__logo {
-    display: grid;
-    place-items: center;
-    width: 3rem;
+    display: flex;
+    align-items: center;
     height: 3rem;
+    padding: 0 0.95rem 0.15rem 1rem;
     font-family: var(--font-hand);
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     line-height: 1;
-    rotate: -6deg;
+    rotate: -4deg;
     transition: rotate 0.5s var(--ease-back);
+  }
+  .nav__i {
+    position: relative;
+  }
+  /* звёздочка над «ı» на месте точки */
+  .nav__star {
+    position: absolute;
+    left: 50%;
+    top: 0.22em;
+    width: 0.4em;
+    height: 0.4em;
+    max-width: none;
+    translate: -32% 0;
+    fill: var(--color-accent);
+    transition: rotate 0.6s var(--ease-back);
+  }
+  .nav__logo:hover .nav__star {
+    rotate: 144deg;
   }
   .nav__logo::before {
     border-radius: 52% 48% 46% 54% / 55% 45% 55% 45%;
     animation-name: boil-round;
   }
   .nav__logo:hover {
-    rotate: 8deg;
+    rotate: 3deg;
   }
 
   .nav__links ul {
@@ -435,9 +456,9 @@ const links = [
       gap: 0.5rem;
     }
     .nav__logo {
-      width: 2.5rem;
       height: 2.5rem;
-      font-size: 1.25rem;
+      padding-inline: 0.75rem 0.7rem;
+      font-size: 1.45rem;
     }
     .nav__langs a {
       padding-inline: 0.3rem;
