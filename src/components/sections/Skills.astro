@@ -10,12 +10,14 @@ interface Props {
 const { lang } = Astro.props;
 const t = useT(lang);
 
-const rows = [
-  { label: t('skills.languages'), items: skills.languages, dir: 'left', speed: 40 },
-  { label: t('skills.tech'), items: skills.tech, dir: 'right', speed: 50 },
-  { label: t('skills.tools'), items: skills.tools, dir: 'left', speed: 44 },
+const groups = [
+  { label: t('skills.languages'), items: skills.languages, tilt: -1.2, tape: -5 },
+  { label: t('skills.tech'), items: skills.tech, tilt: 0.8, tape: 3 },
+  { label: t('skills.tools'), items: skills.tools, tilt: -0.6, tape: -2 },
 ];
 const tagTilts = [-3, 2, -1.5, 3];
+// Декоративная лента: все навыки подряд, вперемешку по группам
+const band = [...skills.tech.slice(0, 5), ...skills.languages.slice(0, 4), ...skills.tools.slice(0, 5)];
 const toolCount = skills.languages.length + skills.tech.length + skills.tools.length;
 ---
 
@@ -29,39 +31,45 @@ const toolCount = skills.languages.length + skills.tech.length + skills.tools.le
     <p class="micro skills__count" data-reveal style="--reveal-i: 2">({toolCount} {t('skills.count')})</p>
   </div>
 
-  <div class="skills__rows container">
+  {/* Живость секции: лента этикет-принтера наискось через лист. Чисто декоративная,
+      сами навыки читаются в карточках ниже */}
+  <div class="skills__band" aria-hidden="true">
+    {[0, 1].map(() => (
+      <ul class="skills__band-track" role="list">
+        {band.map((s) => (
+          <li>{s}</li>
+        ))}
+      </ul>
+    ))}
+  </div>
+
+  {/* Все навыки видны сразу: рекрутер ищет глазами знакомые слова, бегущая строка мешала */}
+  <div class="skills__grid container">
     {
-      rows.map((row, i) => (
+      groups.map((g, i) => (
         <div
-          class="marquee"
+          class="skills__card paper taped"
           data-reveal
-          style={`--reveal-i: ${i}; --speed: ${row.speed}s`}
-          data-dir={row.dir}
+          style={`--reveal-i: ${i}; --tilt: ${g.tilt}deg; --tape-tilt: ${g.tape}deg`}
           data-perch={(['juggle', 'stand', 'point'] as const)[i % 3]}
-          data-perch-at={[0.8, 0.45, 0.88][i % 3]}
+          data-perch-at={[0.8, 0.45, 0.82][i % 3]}
           data-perch-face={i % 2 ? 'right' : 'left'}
         >
-          <h3 class="marquee__label">{row.label}</h3>
-          <div class="marquee__viewport">
-            {/* Первая копия — для скринридеров, вторая — только для бесшовной петли */}
-            <ul class="marquee__track" role="list">
-              {row.items.map((s) => (
-                <li>{s}</li>
-              ))}
-            </ul>
-            <ul class="marquee__track" role="list" aria-hidden="true">
-              {row.items.map((s) => (
-                <li>{s}</li>
-              ))}
-            </ul>
-          </div>
+          <h3 class="skills__label">
+            {g.label} <span class="micro">({String(g.items.length).padStart(2, '0')})</span>
+          </h3>
+          <ul class="skills__list" role="list">
+            {g.items.map((s, n) => (
+              <li style={`--n: ${n}`}>{s}</li>
+            ))}
+          </ul>
         </div>
       ))
     }
   </div>
 
   <div class="container spoken" data-reveal data-perch="wave" data-perch-at="0.7" data-perch-face="left">
-    <h3 class="marquee__label">{t('skills.spoken')}</h3>
+    <h3 class="skills__label">{t('skills.spoken')}</h3>
     <ul class="spoken__list" role="list">
       {
         spoken.map((s, i) => (
@@ -81,6 +89,8 @@ const toolCount = skills.languages.length + skills.tech.length + skills.tools.le
     outline: none;
     /* свой слой: при раскрытии проектов выше секция сдвигается без перерисовки */
     will-change: transform;
+    /* лента шире экрана и наклонена: без clip расширяет layout viewport на телефоне */
+    overflow-x: clip;
     --station-top: calc(var(--section-space) + 3.5rem);
   }
 
@@ -94,106 +104,129 @@ const toolCount = skills.languages.length + skills.tech.length + skills.tools.le
     font-size: var(--step-4);
   }
 
-  .skills__rows {
-    display: grid;
-    /* minmax(0, …): иначе бесконечная лента растягивает колонку и всю страницу */
-    grid-template-columns: minmax(0, 1fr);
-    gap: clamp(1.6rem, 3vw, 2.6rem);
-  }
-
-  .marquee__label {
-    font-family: var(--font-hand);
-    font-size: var(--step-1);
-    font-weight: 600;
-    line-height: 1;
-    color: var(--color-accent);
-    margin-bottom: 0.3rem;
-    rotate: -1.5deg;
-    width: fit-content;
-  }
-
-  .marquee__viewport {
-    position: relative;
+  /* --- Лента: тёмная полоса наискось, бесконечно едет --- */
+  .skills__band {
     display: flex;
+    width: calc(100% + 10rem);
+    margin: 0 -5rem clamp(2.8rem, 6vw, 4.2rem);
     overflow: hidden;
-    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    color: var(--color-bg);
+    background: var(--color-text);
+    rotate: -2.2deg;
+    box-shadow: 0 3px 0 var(--color-shadow);
   }
-  /* верхняя и нижняя линии от руки */
-  .marquee__viewport::before,
-  .marquee__viewport::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 8px;
-    background: var(--color-line);
-    -webkit-mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
-    mask: var(--wavy-line) 0 50% / 420px 8px repeat-x;
-  }
-  .marquee__viewport::before {
-    top: 0;
-  }
-  .marquee__viewport::after {
-    bottom: 0;
-    -webkit-mask-position: 160px 50%;
-    mask-position: 160px 50%;
-  }
-
-  .marquee__track {
+  .skills__band-track {
     flex: none;
     display: flex;
     min-width: max-content;
-    animation: marquee var(--speed) linear infinite;
+    animation: band 60s linear infinite;
   }
-  [data-dir='right'] .marquee__track {
-    animation-direction: reverse;
-  }
-  .marquee:hover .marquee__track,
-  :global(.is-still) .marquee__track {
+  :global(.is-still) .skills__band-track {
     animation-play-state: paused;
   }
-
-  .marquee__track li {
+  .skills__band li {
     display: flex;
     align-items: center;
-    gap: clamp(1rem, 2.5vw, 2rem);
-    padding: 0.5rem 0 0.6rem clamp(1rem, 2.5vw, 2rem);
+    gap: 1.4rem;
+    padding: 0.35rem 0 0.45rem 1.4rem;
     font-family: var(--font-hand);
     font-weight: 600;
-    font-size: var(--step-3);
-    line-height: 1.1;
+    font-size: var(--step-2);
+    line-height: 1;
     white-space: nowrap;
   }
-  .marquee__track li:nth-child(3n + 2) {
-    rotate: -2deg;
-  }
-  .marquee__track li:nth-child(3n) {
-    rotate: 1.5deg;
-  }
-  .marquee__track li::after {
+  .skills__band li::after {
     content: '✶';
-    font-size: 0.5em;
+    font-size: 0.45em;
     color: var(--color-accent);
   }
-
-  @keyframes marquee {
+  @keyframes band {
     to {
       transform: translateX(-100%);
     }
   }
 
+  .skills__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    align-items: start;
+    gap: clamp(2rem, 4vw, 2.8rem) clamp(1.4rem, 3vw, 2.2rem);
+  }
+
+  .skills__card {
+    padding: clamp(1.5rem, 3vw, 2rem) clamp(1.2rem, 2.5vw, 1.6rem) clamp(1.3rem, 2.5vw, 1.7rem);
+  }
+
+  .skills__label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-family: var(--font-hand);
+    font-size: var(--step-1);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-accent);
+    margin-bottom: 0.9rem;
+  }
+  .skills__label .micro {
+    font-size: 0.65rem;
+  }
+
+  .skills__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.45rem;
+  }
+
+  /* Навык: подписанная от руки бирка в неровной рамке (статичной, без boil) */
+  .skills__list li {
+    padding: 0.15em 0.6em 0.2em;
+    font-family: var(--font-hand);
+    font-weight: 600;
+    font-size: var(--step-1);
+    line-height: 1.1;
+    white-space: nowrap;
+    border: 1.5px solid var(--color-line);
+    border-radius: var(--wobble);
+    transition:
+      rotate 0.4s var(--ease-back),
+      background-color 0.2s;
+  }
+  .skills__list li:nth-child(3n + 2) {
+    rotate: -1.5deg;
+  }
+  .skills__list li:nth-child(3n) {
+    rotate: 1deg;
+  }
+  .skills__list li:hover {
+    rotate: 0deg;
+    background: var(--color-highlight);
+  }
+
+  /* Бирки «шлёпаются» на карточку по одной, когда она появилась.
+     Свои задержки у каждого свойства: ховер (rotate/фон) не ждёт очереди */
+  :global(.js) .skills__card li {
+    opacity: 0;
+    scale: 0.4;
+  }
+  :global(.js) .skills__card:global(.is-in) li {
+    opacity: 1;
+    scale: 1;
+    transition:
+      opacity 0.25s var(--ease-out) var(--pop-delay),
+      scale 0.55s var(--ease-back) var(--pop-delay),
+      rotate 0.4s var(--ease-back),
+      background-color 0.2s;
+    --pop-delay: calc(0.35s + var(--reveal-i, 0) * 90ms + var(--n) * 55ms);
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .marquee__viewport {
-      flex-wrap: wrap;
-      mask-image: none;
-    }
-    .marquee__track {
-      flex-wrap: wrap;
-      min-width: 0;
-      animation: none;
-    }
-    .marquee__track[aria-hidden] {
+    .skills__band {
       display: none;
+    }
+    :global(.js) .skills__card li {
+      opacity: 1;
+      scale: 1;
     }
   }
 
@@ -206,7 +239,6 @@ const toolCount = skills.languages.length + skills.tech.length + skills.tools.le
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     gap: 1.4rem;
-    margin-top: 0.8rem;
   }
 
   .spoken__list li {
