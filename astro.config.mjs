@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  site: 'https://example.com', // TODO: replace with the real domain
+  site: 'https://makiwebdeveloper.up.railway.app',
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'sv', 'uk'],

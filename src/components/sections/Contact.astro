@@ -29,13 +29,13 @@ const [user, domain] = profile.email.split('@');
       <p class="contact__lead">{t('contact.lead')}</p>
 
       <div class="contact__mail">
-        <a class="contact__email" href={`mailto:${profile.email}`} data-cursor="Mail" data-plane-target>
+        <a class="contact__email" href={`mailto:${profile.email}`} data-cursor="Mail" data-umami-event="email-click" data-plane-target>
           <span>{user}</span><span class="contact__at">@</span><span>{domain}</span>
           <svg class="contact__email-line" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true">
             <path pathLength="1" d="M3 12c40-6 90-8 140-4s100 4 154-2"></path>
           </svg>
         </a>
-        <button type="button" class="btn" data-copy={profile.email} data-magnetic="0.25">
+        <button type="button" class="btn" data-copy={profile.email} data-umami-event="email-copy" data-magnetic="0.25">
           {t('contact.copy')}
         </button>
       </div>
@@ -44,14 +44,14 @@ const [user, domain] = profile.email.split('@');
         {
           profile.links.map((l) => (
             <li>
-              <a class="btn" href={l.href} target="_blank" rel="noopener" data-magnetic="0.25">
+              <a class="btn" href={l.href} target="_blank" rel="noopener" data-magnetic="0.25" data-umami-event={`link-${l.label.toLowerCase()}`}>
                 {l.label} ↗
               </a>
             </li>
           ))
         }
         <li>
-          <a class="btn btn--solid" href={profile.cv} download data-magnetic="0.25">{t('contact.cv')} ↓</a>
+          <a class="btn btn--solid" href={profile.cv} download data-umami-event="cv-download" data-magnetic="0.25">{t('contact.cv')} ↓</a>
         </li>
       </ul>
     </div>
@@ -220,6 +220,19 @@ const [user, domain] = profile.email.split('@');
 </style>
 
 <script>
+  import { track } from '../../lib/analytics';
+
+  // Долистал ли посетитель до контактов (один раз за визит)
+  const section = document.querySelector<HTMLElement>('#contact');
+  if (section) {
+    const seen = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      seen.disconnect();
+      track('reached-contact');
+    }, { threshold: 0.3 });
+    seen.observe(section);
+  }
+
   const btn = document.querySelector<HTMLButtonElement>('[data-copy]');
   const toast = document.querySelector<HTMLElement>('[data-toast]')!;
   let timer = 0;

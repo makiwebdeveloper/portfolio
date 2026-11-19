@@ -124,6 +124,11 @@ Astro 5 (static, без UI-фреймворка) + TypeScript strict, GSAP 3 + S
 - Стикмен лежит в координатах страницы, а закреплённые (sticky) блоки едут по странице вместе со скроллом. Всё, что хранится между кадрами рядом со sticky-блоком (прошлое место, скорость, начало прыжка), считай в экранных координатах или смещениями от живой точки, иначе он отстаёт на величину скролла за кадр. По той же причине `render` рисует каждый кадр, когда сменился `scrollY` (Lenis крутит раньше, событие `scroll` приходит позже).
 - `localStorage`/`sessionStorage` всегда оборачиваем в `try/catch` (приватный режим).
 
+## Аналитика
+
+- Umami Cloud (cloud.umami.is), без cookie. ID в `src/lib/analytics.ts`, скрипт в `Base.astro` только в прод-сборке и с `data-domains` = хост `site` (`makiwebdeveloper.up.railway.app`), поэтому localhost не считается.
+- Клики размечаются атрибутом `data-umami-event="имя"` (+ `data-umami-event-<поле>`), события из кода — `track()` из `analytics.ts`. Источники рекрутеров — метки `?ref=` в ссылках.
+
 ## Контент и i18n
 
 - Новая строка интерфейса добавляется в `en` в `ui.ts`. Тип `Record<UIKey, string>` заставит добавить её в `sv` и `uk`, иначе билд упадёт.
@@ -135,7 +140,7 @@ Astro 5 (static, без UI-фреймворка) + TypeScript strict, GSAP 3 + S
 
 ## Открытые TODO
 
-- Реальные ссылки на GitHub и LinkedIn (`src/data/profile.ts`) и домен (`site` в `astro.config.mjs`).
+- Реальные ссылки на GitHub и LinkedIn (`src/data/profile.ts`).
 - Годы у Focal, VTIKHA, Soundy, MakMoney и Acars проставлены наугад, их нужно подтвердить у пользователя.
 - OG-картинка, Lighthouse-прогон, проверка на реальных iOS/Android (особенно Safari и SVG-фильтры), деплой.
 

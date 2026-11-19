@@ -116,7 +116,7 @@ const range = `${Math.min(...years)}—${Math.max(...years)}`;
                       <ul class="project__links" role="list">
                         {p.links.map((l) => (
                           <li>
-                            <a class="btn" href={l.href} target="_blank" rel="noopener">
+                            <a class="btn" href={l.href} target="_blank" rel="noopener" data-umami-event="project-link" data-umami-event-project={p.slug} data-umami-event-link={l.label}>
                               {l.label} ↗
                             </a>
                           </li>
@@ -526,6 +526,7 @@ const range = `${Math.min(...years)}—${Math.max(...years)}`;
 
 <script>
   import { gsap, ScrollTrigger } from '../../lib/motion';
+  import { track } from '../../lib/analytics';
 
   const items = Array.from(document.querySelectorAll<HTMLElement>('[data-project]'));
   const preview = document.querySelector<HTMLElement>('[data-preview]')!;
@@ -549,6 +550,8 @@ const range = `${Math.min(...years)}—${Math.max(...years)}`;
       const willOpen = !item.classList.contains('is-open');
       items.forEach((other) => other !== item && other.classList.contains('is-open') && setOpen(other, false));
       setOpen(item, willOpen);
+      // какие проекты раскрывают (закрытие не считаем)
+      if (willOpen) track('project-open', { project: item.dataset.project ?? '' });
     });
   });
 

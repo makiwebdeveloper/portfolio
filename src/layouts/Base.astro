@@ -13,6 +13,7 @@ import Nav from '../components/Nav.astro';
 import Frame from '../components/Frame.astro';
 import SketchDefs from '../components/sketch/SketchDefs.astro';
 import Stickman from '../components/Stickman.astro';
+import { UMAMI_ID } from '../lib/analytics';
 // Рукописный шрифт грузим заранее: иначе hero успевает показаться запасным шрифтом
 import caveatLatin from '@fontsource-variable/caveat/files/caveat-latin-wght-normal.woff2?url';
 import caveatCyrillic from '@fontsource-variable/caveat/files/caveat-cyrillic-wght-normal.woff2?url';
@@ -24,6 +25,9 @@ interface Props {
 const { lang } = Astro.props;
 const t = useT(lang);
 const canonical = new URL(pathFor(lang), Astro.site);
+// Статистика только с прод-сборки; на настоящем домене — только с него (не считаем preview на localhost)
+const analytics = import.meta.env.PROD && UMAMI_ID !== '';
+const siteHost = Astro.site && Astro.site.hostname !== 'example.com' ? Astro.site.hostname : undefined;
 ---
 
 <!doctype html>
@@ -46,6 +50,7 @@ const canonical = new URL(pathFor(lang), Astro.site);
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preload" href={caveatLatin} as="font" type="font/woff2" crossorigin />
     {lang === 'uk' && <link rel="preload" href={caveatCyrillic} as="font" type="font/woff2" crossorigin />}
+    {analytics && <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id={UMAMI_ID} data-domains={siteHost}></script>}
 
     <!-- До первой отрисовки: тема, флаги для анимаций. -->
     <script is:inline>

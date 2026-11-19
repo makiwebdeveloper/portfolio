@@ -51,6 +51,8 @@ const links = [
               lang={l}
               aria-current={l === lang ? 'true' : undefined}
               data-lang-link
+              data-umami-event="lang-switch"
+              data-umami-event-to={l}
               data-astro-prefetch="hover"
             >
               {l.toUpperCase()}
@@ -76,6 +78,7 @@ const links = [
         class="nav__icon nav__theme"
         type="button"
         data-theme-toggle
+        data-umami-event="theme-toggle"
         aria-label={t('theme.toggle')}
         data-day={t('theme.day')}
         data-night={t('theme.night')}
